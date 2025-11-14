@@ -1,0 +1,79 @@
+from django.db import models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class Restaurant(models.Model):
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    cuisine_type = models.CharField(max_length=100)
+    address = models.TextField()
+    phone_number = models.CharField(max_length=15)
+    email = models.EmailField()
+    website = models.URLField(blank=True)
+    image = models.ImageField(upload_to='restaurants/', blank=True)
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0)
+    price_range = models.CharField(max_length=20, choices=[
+        ('$', 'Budget'),
+        ('$$', 'Moderate'),
+        ('$$$', 'Expensive'),
+        ('$$$$', 'Fine Dining')
+    ])
+    opening_hours = models.JSONField(default=dict)
+    features = models.JSONField(default=list)  # ['wifi', 'parking', 'delivery']
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+class MenuCategory(models.Model):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='categories')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    display_order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order']
+        verbose_name_plural = 'Menu Categories'
+
+    def __str__(self):
+        return f"{self.restaurant.name} - {self.name}"
+
+class MenuItem(models.Model):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='menu_items')
+    category = models.ForeignKey(MenuCategory, on_delete=models.CASCADE, related_name='items')
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    image = models.ImageField(upload_to='menu_items/', blank=True)
+    ingredients = models.JSONField(default=list)
+    allergens = models.JSONField(default=list)
+    nutritional_info = models.JSONField(default=dict)
+    is_available = models.BooleanField(default=True)
+    is_vegetarian = models.BooleanField(default=False)
+    is_vegan = models.BooleanField(default=False)
+    is_gluten_free = models.BooleanField(default=False)
+    spice_level = models.IntegerField(default=0, choices=[(i, i) for i in range(6)])
+    prep_time = models.IntegerField(help_text="Preparation time in minutes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.restaurant.name} - {self.name}"
+
+class RestaurantReview(models.Model):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
+    comment = models.TextField()
+    images = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['restaurant', 'user']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.restaurant.name} ({self.rating}/5)"
