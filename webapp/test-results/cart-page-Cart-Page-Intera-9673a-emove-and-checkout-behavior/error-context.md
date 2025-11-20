@@ -1,0 +1,383 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - navigation [ref=e4]:
+      - generic [ref=e5]:
+        - link "🍽️ The Restaurant" [ref=e6] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e7]:
+          - list [ref=e8]:
+            - listitem [ref=e9]:
+              - link "🏠 Home" [ref=e10] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=e11]:
+              - link "🏪 Restaurants" [ref=e12] [cursor=pointer]:
+                - /url: /restaurants
+            - listitem [ref=e13]:
+              - link "📋 Menu" [ref=e14] [cursor=pointer]:
+                - /url: /menu
+          - generic [ref=e15]:
+            - link "🔐 Login" [ref=e16] [cursor=pointer]:
+              - /url: /login
+            - link "Shopping cart with 1 items" [ref=e17] [cursor=pointer]:
+              - /url: /cart
+              - text: 🛒 Cart
+              - generic "1 items in cart" [ref=e18]: "1"
+    - main [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - heading "Welcome to The Restaurant" [level=1] [ref=e22]
+          - paragraph [ref=e23]: Discover amazing restaurants and order your favorite dishes
+          - button "Explore Restaurants 🍽️" [ref=e24] [cursor=pointer]
+        - generic [ref=e26]:
+          - generic [ref=e28]:
+            - generic [ref=e29]: 🔍
+            - textbox "Search restaurants or dishes..." [ref=e30]
+          - combobox [ref=e32]:
+            - option "All Cuisines" [selected]
+            - option "🍣 Japanese"
+            - option "🍝 Italian"
+            - option "🥗 Vegetarian"
+            - option "🍽️ Continental"
+          - combobox [ref=e34]:
+            - option "All Prices" [selected]
+            - option "💰 Budget (GHC)"
+            - option "💰💰 Moderate (GHC GHC)"
+            - option "💰💰💰 Expensive (GHC GHC GHC)"
+            - option "💰💰💰💰 Premium (GHC GHC GHC GHC)"
+        - generic [ref=e35]:
+          - heading "Featured Restaurants (4)" [level=2] [ref=e37]
+          - generic [ref=e39]:
+            - generic [ref=e40]:
+              - link "Open details for Sakura Sushi Bar" [ref=e41] [cursor=pointer]:
+                - /url: /restaurants/sakura-sushi-bar
+                - img "Sakura Sushi Bar" [ref=e42]
+              - generic [ref=e43]:
+                - generic [ref=e44]: ⭐ 4.80
+                - generic [ref=e45]: 💰💰💰
+            - generic [ref=e46]:
+              - generic [ref=e47]:
+                - heading "View details for Sakura Sushi Bar" [level=5] [ref=e48]:
+                  - link "View details for Sakura Sushi Bar" [ref=e49] [cursor=pointer]:
+                    - /url: /restaurants/sakura-sushi-bar
+                    - text: Sakura Sushi Bar
+                - generic [ref=e50]: Japanese
+              - paragraph [ref=e51]: Fresh sushi and Japanese delicacies in a modern atmosphere.
+              - generic [ref=e52]:
+                - generic [ref=e53]:
+                  - generic [ref=e54]: 📍
+                  - generic [ref=e55]: 456 Oak Avenue, Midtown
+                - generic [ref=e56]:
+                  - generic [ref=e57]: 🚚
+                  - generic [ref=e58]: Free delivery over GHC 50
+              - generic [ref=e59]:
+                - link "View details for Sakura Sushi Bar" [ref=e60] [cursor=pointer]:
+                  - /url: /restaurants/sakura-sushi-bar
+                  - text: View Details
+                - button "🍽️View Menu" [disabled]
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - link "Open details for Bella Vista Italian" [ref=e64] [cursor=pointer]:
+                - /url: /restaurants/bella-vista-italian
+                - img "Bella Vista Italian" [ref=e65]
+              - generic [ref=e66]:
+                - generic [ref=e67]: ⭐ 4.50
+                - generic [ref=e68]: 💰💰
+            - generic [ref=e69]:
+              - generic [ref=e70]:
+                - heading "View details for Bella Vista Italian" [level=5] [ref=e71]:
+                  - link "View details for Bella Vista Italian" [ref=e72] [cursor=pointer]:
+                    - /url: /restaurants/bella-vista-italian
+                    - text: Bella Vista Italian
+                - generic [ref=e73]: Italian
+              - paragraph [ref=e74]: Authentic Italian cuisine with fresh ingredients and traditional recipes.
+              - generic [ref=e75]:
+                - generic [ref=e76]:
+                  - generic [ref=e77]: 📍
+                  - generic [ref=e78]: 123 Main St, Downtown
+                - generic [ref=e79]:
+                  - generic [ref=e80]: 🚚
+                  - generic [ref=e81]: Free delivery over GHC 50
+              - generic [ref=e82]:
+                - link "View details for Bella Vista Italian" [ref=e83] [cursor=pointer]:
+                  - /url: /restaurants/bella-vista-italian
+                  - text: View Details
+                - button "🍽️View Menu" [ref=e84] [cursor=pointer]
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - link "Open details for Green Garden Café" [ref=e88] [cursor=pointer]:
+                - /url: /restaurants/green-garden-cafe
+                - img "Green Garden Café" [ref=e89]
+              - generic [ref=e90]:
+                - generic [ref=e91]: ⭐ 4.30
+                - generic [ref=e92]: 💰
+            - generic [ref=e93]:
+              - generic [ref=e94]:
+                - heading "View details for Green Garden Café" [level=5] [ref=e95]:
+                  - link "View details for Green Garden Café" [ref=e96] [cursor=pointer]:
+                    - /url: /restaurants/green-garden-cafe
+                    - text: Green Garden Café
+                - generic [ref=e97]: Vegetarian
+              - paragraph [ref=e98]: Organic, plant-based meals and fresh juices.
+              - generic [ref=e99]:
+                - generic [ref=e100]:
+                  - generic [ref=e101]: 📍
+                  - generic [ref=e102]: 789 Park Lane, Uptown
+                - generic [ref=e103]:
+                  - generic [ref=e104]: 🚚
+                  - generic [ref=e105]: Free delivery over GHC 50
+              - generic [ref=e106]:
+                - link "View details for Green Garden Café" [ref=e107] [cursor=pointer]:
+                  - /url: /restaurants/green-garden-cafe
+                  - text: View Details
+                - button "🍽️View Menu" [ref=e108] [cursor=pointer]
+        - generic [ref=e109]:
+          - heading "Popular Cuisines" [level=2] [ref=e110]
+          - generic [ref=e111]:
+            - button "🍣 Japanese 1 restaurant ⭐ 4.8" [ref=e112] [cursor=pointer]:
+              - generic [ref=e113]: 🍣
+              - heading "Japanese" [level=5] [ref=e114]
+              - generic [ref=e115]:
+                - generic [ref=e116]: 1 restaurant
+                - generic [ref=e117]: ⭐ 4.8
+            - button "🍝 Italian 1 restaurant ⭐ 4.5" [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: 🍝
+              - heading "Italian" [level=5] [ref=e120]
+              - generic [ref=e121]:
+                - generic [ref=e122]: 1 restaurant
+                - generic [ref=e123]: ⭐ 4.5
+            - button "🍽️ Vegetarian 1 restaurant ⭐ 4.3" [ref=e124] [cursor=pointer]:
+              - generic [ref=e125]: 🍽️
+              - heading "Vegetarian" [level=5] [ref=e126]
+              - generic [ref=e127]:
+                - generic [ref=e128]: 1 restaurant
+                - generic [ref=e129]: ⭐ 4.3
+            - button "🍽️ Continental 1 restaurant" [ref=e130] [cursor=pointer]:
+              - generic [ref=e131]: 🍽️
+              - heading "Continental" [level=5] [ref=e132]
+              - generic [ref=e134]: 1 restaurant
+        - generic [ref=e135]:
+          - heading "Browse by Meal Time" [level=2] [ref=e136]
+          - generic [ref=e137]:
+            - generic [ref=e138]:
+              - generic [ref=e139]:
+                - heading "🌅Breakfast" [level=3] [ref=e140]
+                - text: 7:00 AM - 11:00 AM
+              - generic [ref=e141]: 2 items
+            - generic [ref=e143]:
+              - generic [ref=e144] [cursor=pointer]:
+                - img "Green Machine" [ref=e145]
+                - generic [ref=e146]:
+                  - heading "Green Machine" [level=5] [ref=e147]
+                  - paragraph [ref=e148]: Green Garden Café
+                  - generic [ref=e149]:
+                    - generic [ref=e150]: GHC 7.99
+                    - generic [ref=e151]: 🌱 Veg
+              - generic [ref=e152] [cursor=pointer]:
+                - img "Berry Blast" [ref=e153]
+                - generic [ref=e154]:
+                  - heading "Berry Blast" [level=5] [ref=e155]
+                  - paragraph [ref=e156]: Green Garden Café
+                  - generic [ref=e157]:
+                    - generic [ref=e158]: GHC 8.99
+                    - generic [ref=e159]: 🌱 Veg
+          - generic [ref=e160]:
+            - generic [ref=e161]:
+              - generic [ref=e162]:
+                - heading "🌤️Lunch" [level=3] [ref=e163]
+                - text: 11:30 AM - 3:00 PM
+              - generic [ref=e164]: 2 items
+            - generic [ref=e166]:
+              - generic [ref=e167] [cursor=pointer]:
+                - img "Buddha Bowl" [ref=e168]
+                - generic [ref=e169]:
+                  - heading "Buddha Bowl" [level=5] [ref=e170]
+                  - paragraph [ref=e171]: Green Garden Café
+                  - generic [ref=e172]:
+                    - generic [ref=e173]: GHC 14.99
+                    - generic [ref=e174]: 🌱 Veg
+              - generic [ref=e175] [cursor=pointer]:
+                - img "Green Goddess Bowl" [ref=e176]
+                - generic [ref=e177]:
+                  - heading "Green Goddess Bowl" [level=5] [ref=e178]
+                  - paragraph [ref=e179]: Green Garden Café
+                  - generic [ref=e180]:
+                    - generic [ref=e181]: GHC 13.99
+                    - generic [ref=e182]: 🌱 Veg
+          - generic [ref=e183]:
+            - generic [ref=e184]:
+              - generic [ref=e185]:
+                - heading "🌆Supper" [level=3] [ref=e186]
+                - text: 5:00 PM - 7:00 PM
+              - generic [ref=e187]: 1 items
+            - generic [ref=e190] [cursor=pointer]:
+              - img "Red Fish Pepper Soup" [ref=e191]
+              - generic [ref=e192]:
+                - heading "Red Fish Pepper Soup" [level=5] [ref=e193]
+                - paragraph [ref=e194]: Nana Buruwaah
+                - generic [ref=e196]: GHC 122.00
+          - generic [ref=e197]:
+            - generic [ref=e198]:
+              - generic [ref=e199]:
+                - heading "🌙Dinner" [level=3] [ref=e200]
+                - text: 6:00 PM - 10:00 PM
+              - generic [ref=e201]: 2 items
+            - generic [ref=e203]:
+              - generic [ref=e204] [cursor=pointer]:
+                - img "Spaghetti Carbonara" [ref=e205]
+                - generic [ref=e206]:
+                  - heading "Spaghetti Carbonara" [level=5] [ref=e207]
+                  - paragraph [ref=e208]: Bella Vista Italian
+                  - generic [ref=e210]: GHC 18.99
+              - generic [ref=e211] [cursor=pointer]:
+                - img "Penne Arrabbiata" [ref=e212]
+                - generic [ref=e213]:
+                  - heading "Penne Arrabbiata" [level=5] [ref=e214]
+                  - paragraph [ref=e215]: Bella Vista Italian
+                  - generic [ref=e216]:
+                    - generic [ref=e217]: GHC 16.99
+                    - generic [ref=e218]: 🌱 Veg
+          - generic [ref=e219]:
+            - generic [ref=e220]:
+              - generic [ref=e221]:
+                - heading "⭐All Day" [level=3] [ref=e222]
+                - text: Available All Day
+              - generic [ref=e223]: 5 items
+            - generic [ref=e225]:
+              - generic [ref=e226] [cursor=pointer]:
+                - img "Bruschetta Trio" [ref=e227]
+                - generic [ref=e228]:
+                  - heading "Bruschetta Trio" [level=5] [ref=e229]
+                  - paragraph [ref=e230]: Bella Vista Italian
+                  - generic [ref=e231]:
+                    - generic [ref=e232]: GHC 12.99
+                    - generic [ref=e233]: 🌱 Veg
+              - generic [ref=e234] [cursor=pointer]:
+                - img "Calamari Fritti" [ref=e235]
+                - generic [ref=e236]:
+                  - heading "Calamari Fritti" [level=5] [ref=e237]
+                  - paragraph [ref=e238]: Bella Vista Italian
+                  - generic [ref=e240]: GHC 15.99
+              - generic [ref=e241] [cursor=pointer]:
+                - img "California Roll" [ref=e242]
+                - generic [ref=e243]:
+                  - heading "California Roll" [level=5] [ref=e244]
+                  - paragraph [ref=e245]: Sakura Sushi Bar
+                  - generic [ref=e247]: GHC 8.99
+              - generic [ref=e248] [cursor=pointer]:
+                - img "Spicy Tuna Roll" [ref=e249]
+                - generic [ref=e250]:
+                  - heading "Spicy Tuna Roll" [level=5] [ref=e251]
+                  - paragraph [ref=e252]: Sakura Sushi Bar
+                  - generic [ref=e254]: GHC 11.99
+              - generic [ref=e255] [cursor=pointer]:
+                - img "Vegetable Roll" [ref=e256]
+                - generic [ref=e257]:
+                  - heading "Vegetable Roll" [level=5] [ref=e258]
+                  - paragraph [ref=e259]: Sakura Sushi Bar
+                  - generic [ref=e260]:
+                    - generic [ref=e261]: GHC 7.99
+                    - generic [ref=e262]: 🌱 Veg
+    - button "View cart with 1 items" [ref=e263] [cursor=pointer]:
+      - generic [ref=e264]:
+        - text: 🛒
+        - generic [ref=e265]: "1"
+    - contentinfo [ref=e266]:
+      - paragraph [ref=e268]: © 2024 The Restaurant. Built with React & Django.
+  - dialog "🍽️ Sakura Sushi Bar" [ref=e270]:
+    - generic [ref=e271]:
+      - generic [ref=e274]:
+        - generic [ref=e277]:
+          - heading "🍽️ Sakura Sushi Bar" [level=3] [ref=e278]
+          - paragraph [ref=e279]: Japanese • Fresh sushi and Japanese delicacies in a modern atmosphere.
+        - button "Close" [ref=e281] [cursor=pointer]: ✕
+      - generic [ref=e283]:
+        - generic [ref=e286]:
+          - heading "Our Menu (3 items)" [level=5] [ref=e287]
+          - generic [ref=e288]:
+            - generic [ref=e289]: ⭐ 4.80
+            - generic [ref=e290]: 💰💰💰
+        - generic [ref=e291]:
+          - generic [ref=e293]:
+            - generic [ref=e294]:
+              - img "California Roll" [ref=e295]
+              - generic [ref=e297]: $8.99
+            - generic [ref=e298]:
+              - heading "California Roll" [level=6] [ref=e299]
+              - paragraph [ref=e300]: Crab, avocado, and cucumber with sesame seeds
+              - generic [ref=e302]: ⏱️ Ready in 8 minutes
+              - generic [ref=e303]:
+                - generic [ref=e304]:
+                  - generic [ref=e305]:
+                    - generic [ref=e306]: Quantity
+                    - generic [ref=e307]:
+                      - button "−" [disabled]
+                      - spinbutton [ref=e308]: "1"
+                      - button "+" [ref=e309] [cursor=pointer]
+                  - generic [ref=e310]:
+                    - generic [ref=e311]: Total
+                    - generic [ref=e312]: $8.99
+                - button "🛒 Add 1 to Cart" [active] [ref=e313] [cursor=pointer]
+          - generic [ref=e315]:
+            - generic [ref=e316]:
+              - img "Spicy Tuna Roll" [ref=e317]
+              - generic [ref=e319]: $11.99
+            - generic [ref=e320]:
+              - heading "Spicy Tuna Roll" [level=6] [ref=e321]
+              - paragraph [ref=e322]: Fresh tuna with spicy mayo and sriracha
+              - generic [ref=e323]:
+                - generic [ref=e325]: 🌶️🌶️
+                - generic [ref=e326]: ⏱️ Ready in 8 minutes
+              - generic [ref=e327]:
+                - generic [ref=e328]:
+                  - generic [ref=e329]:
+                    - generic [ref=e330]: Quantity
+                    - generic [ref=e331]:
+                      - button "−" [disabled]
+                      - spinbutton [ref=e332]: "1"
+                      - button "+" [ref=e333] [cursor=pointer]
+                  - generic [ref=e334]:
+                    - generic [ref=e335]: Total
+                    - generic [ref=e336]: $11.99
+                - button "🛒 Add 1 to Cart" [ref=e337] [cursor=pointer]
+          - generic [ref=e339]:
+            - generic [ref=e340]:
+              - img "Vegetable Roll" [ref=e341]
+              - generic [ref=e343]: $7.99
+            - generic [ref=e344]:
+              - heading "Vegetable Roll" [level=6] [ref=e345]
+              - paragraph [ref=e346]: Cucumber, avocado, carrot, and pickled radish
+              - generic [ref=e347]:
+                - generic [ref=e348]:
+                  - generic [ref=e349]: 🌱 Vegetarian
+                  - generic [ref=e350]: 🌿 Vegan
+                - generic [ref=e351]: ⏱️ Ready in 6 minutes
+              - generic [ref=e352]:
+                - generic [ref=e353]:
+                  - generic [ref=e354]:
+                    - generic [ref=e355]: Quantity
+                    - generic [ref=e356]:
+                      - button "−" [disabled]
+                      - spinbutton [ref=e357]: "1"
+                      - button "+" [ref=e358] [cursor=pointer]
+                  - generic [ref=e359]:
+                    - generic [ref=e360]: Total
+                    - generic [ref=e361]: $7.99
+                - button "🛒 Add 1 to Cart" [ref=e362] [cursor=pointer]
+      - generic [ref=e365]:
+        - generic [ref=e366]:
+          - generic [ref=e369]: 3 items available
+          - generic [ref=e370]: 📍 456 Oak Avenue, Midtown
+        - generic [ref=e372]:
+          - generic [ref=e373]:
+            - generic [ref=e374]: 🛒 1 item
+            - generic [ref=e375]: $8.99
+          - button "View Cart →" [ref=e376] [cursor=pointer]
+        - generic [ref=e377]:
+          - button "🛒 Go to Cart" [ref=e378] [cursor=pointer]
+          - button "🏪 Restaurants" [ref=e379] [cursor=pointer]
+          - button "📋 Full Menu" [ref=e380] [cursor=pointer]
+          - button "✕ Close" [ref=e381] [cursor=pointer]
+```

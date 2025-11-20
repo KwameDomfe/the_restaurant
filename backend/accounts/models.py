@@ -173,9 +173,9 @@ class CustomerProfile(models.Model):
     # Customer preferences
     preferred_delivery_time = models.CharField(max_length=50, blank=True)
     budget_range = models.CharField(max_length=20, blank=True, choices=[
-        ('low', 'Budget ($-$$)'),
-        ('medium', 'Moderate ($$-$$$)'),
-        ('high', 'Premium ($$$+)'),
+        ('low', 'Budget (GHC-GHC GHC)'),
+        ('medium', 'Moderate (GHC GHC-GHC GHC GHC)'),
+        ('high', 'Premium (GHC GHC GHC+)'),
     ])
     
     # Order history stats

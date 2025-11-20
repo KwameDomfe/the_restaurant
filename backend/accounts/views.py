@@ -126,6 +126,39 @@ class CustomAuthToken(ObtainAuthToken):
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+def login_user(request):
+    """Login user with email and password"""
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    if not email or not password:
+        return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    if not user.check_password(password):
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    if not user.is_active:
+        return Response({'error': 'Account is not active'}, status=status.HTTP_403_FORBIDDEN)
+    
+    # Create or get token
+    token, created = Token.objects.get_or_create(user=user)
+    
+    # Return user data and token
+    user_serializer = UserSerializer(user)
+    return Response({
+        'token': token.key,
+        'user': user_serializer.data,
+        'message': 'Login successful'
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
 def register_user(request):
     """Register a new user with specified user type"""
     

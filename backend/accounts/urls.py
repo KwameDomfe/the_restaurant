@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     UserViewSet, UserProfileViewSet, CustomAuthToken,
-    register_user, logout_user, check_username_availability,
+    login_user, register_user, logout_user, check_username_availability,
     check_email_availability, request_password_reset,
     verify_email, get_user_types
 )
@@ -17,8 +17,10 @@ urlpatterns = [
     path('', include(router.urls)),
     
     # Authentication endpoints
-    path('auth/login/', CustomAuthToken.as_view(), name='login'),
-    path('auth/register/', register_user, name='register'),
+    path('login/', login_user, name='login'),  # Email-based login
+    path('auth/login/', CustomAuthToken.as_view(), name='token_login'),  # Username-based login
+    path('register/', register_user, name='register'),  # New unified registration path
+    path('auth/register/', register_user, name='register_legacy'),  # Legacy (to be deprecated)
     path('auth/logout/', logout_user, name='logout'),
     
     # User validation endpoints

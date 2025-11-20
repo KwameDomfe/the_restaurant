@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
@@ -26,6 +27,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from test_views import test_api
+from restaurants.views import RestaurantViewSet, MenuCategoryViewSet, MenuItemViewSet, RestaurantReviewViewSet
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -44,6 +46,8 @@ def api_root(request):
         }
     })
 
+from restaurants.views import RestaurantViewSet, MenuCategoryViewSet, MenuItemViewSet, RestaurantReviewViewSet
+
 schema_view = get_schema_view(
    openapi.Info(
       title="The Restaurant API",
@@ -56,15 +60,23 @@ schema_view = get_schema_view(
    permission_classes=(permissions.AllowAny,),
 )
 
+router = DefaultRouter()
+router.register(r'restaurants', RestaurantViewSet, basename='restaurant')
+router.register(r'menu-items', MenuItemViewSet, basename='menuitem')
+router.register(r'categories', MenuCategoryViewSet, basename='menucategory')
+router.register(r'reviews', RestaurantReviewViewSet, basename='restaurantreview')
+
+
 urlpatterns = [
     path('', api_root, name='api-root'),
-    path('api/', api_root, name='api-root-api'),
+    # Favicon to avoid 404 in browsers hitting backend root
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True)),
+    path('api/', include(router.urls)),
     path('api/test/', test_api, name='api-test'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('djoser.urls')),
     path('api/auth/', include('djoser.urls.jwt')),
     path('api/accounts/', include('accounts.urls')),
-    path('api/restaurants/', include('restaurants.urls')),
     path('api/orders/', include('orders.urls')),
     path('api/social/', include('social.urls')),
     path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

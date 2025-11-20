@@ -11,7 +11,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = MenuItem
         fields = [
-            'id', 'name', 'description', 'price', 'image', 'ingredients',
+            'id', 'slug', 'restaurant', 'name', 'description', 'price', 'image', 'ingredients',
             'allergens', 'nutritional_info', 'is_available', 'is_vegetarian',
             'is_vegan', 'is_gluten_free', 'spice_level', 'prep_time',
             'restaurant_name', 'created_at', 'updated_at'
@@ -53,7 +53,7 @@ class MenuCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MenuCategory
-        fields = ['id', 'name', 'description', 'display_order', 'items', 'items_count']
+        fields = ['id', 'name', 'description', 'meal_period', 'display_order', 'items', 'items_count']
         read_only_fields = ['id']
 
     def get_items_count(self, obj):
@@ -69,8 +69,9 @@ class RestaurantListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
         fields = [
-            'id', 'name', 'description', 'cuisine_type', 'address',
+            'id', 'slug', 'name', 'description', 'cuisine_type', 'address',
             'phone_number', 'image', 'rating', 'price_range',
+            'delivery_fee', 'delivery_time', 'min_order',
             'categories_count', 'menu_items_count', 'reviews_count',
             'is_active'
         ]
@@ -122,9 +123,10 @@ class RestaurantDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
         fields = [
-            'id', 'name', 'description', 'cuisine_type', 'address',
+            'id', 'slug', 'name', 'description', 'cuisine_type', 'address',
             'phone_number', 'email', 'website', 'image', 'rating',
             'price_range', 'opening_hours', 'features', 'is_active',
+            'delivery_fee', 'delivery_time', 'min_order',
             'categories', 'recent_reviews', 'average_rating', 'total_reviews',
             'created_at', 'updated_at'
         ]

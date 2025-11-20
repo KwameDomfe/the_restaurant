@@ -153,7 +153,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """Simplified serializer for user registration"""
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(write_only=True, min_length=6)
     password_confirm = serializers.CharField(write_only=True)
     
     class Meta:
@@ -162,6 +162,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'username', 'email', 'first_name', 'last_name',
             'phone_number', 'user_type', 'password', 'password_confirm'
         ]
+    
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email is already registered")
+        return value
+    
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username is already taken")
+        return value
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:

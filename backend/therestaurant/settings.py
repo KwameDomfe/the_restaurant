@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-9w+@k=f@i-wpnjqso(q!bva5b_e02=sh6doe+@xi-el+497c@+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.62.227', '192.168.245.227', '192.168.115.227', '0.0.0.0', 'dlkggyw-anonymous-8081.exp.direct', '*']
 
 
 # Application definition
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'rest_framework.authtoken',
+    'django_filters',
     'corsheaders',
     'djoser',
     'channels',
@@ -154,9 +155,41 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React Web App
     "http://127.0.0.1:3000",
     "http://localhost:8081",  # React Native Metro
+    "http://192.168.62.227:8081",  # Current Mobile tunnel
+    "http://192.168.245.227:8081",  # Mobile tunnel old
+    "http://192.168.115.227:8081",  # Mobile tunnel new
+    "exp://192.168.62.227:8081",
+    "exp://192.168.245.227:8081",
+    "exp://192.168.115.227:8081",
+    "exp://dlkggyw-anonymous-8081.exp.direct",  # Expo tunnel
 ]
 
+# For development, allow all origins
+CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOW_CREDENTIALS = True
+
+# Additional CORS settings for mobile compatibility
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 # JWT Configuration
 from datetime import timedelta

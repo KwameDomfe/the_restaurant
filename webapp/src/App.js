@@ -1,115 +1,59 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { CartProvider, useCart } from './context/CartContext';
 import ReactDOM from 'react-dom';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+import RestaurantDetailPage from './pages/RestaurantDetailPage.jsx';
+import MenuItemDetailPage from './pages/MenuItemDetailPage.jsx';
 import axios from 'axios';
 import './App.css';
+import {
+  RestaurantCardSkeleton,
+  HeroSkeleton,
+  MenuItemSkeleton,
+  SearchFilterSkeleton,
+  MenuModalSkeleton,
+  CartItemSkeleton,
+  OrderCardSkeleton,
+  ProfileSkeleton,
+  FullPageSkeleton
+} from './components/SkeletonLoader';
 
-// Create Application Context for global state management
+// NOTE: Reconstructed file header after accidental CartPage injection.
+// The proper CartPage implementation remains later in the file (near line ~1700).
+// Navigation markup from corrupted region removed; a dedicated Navbar component
+// should be (or already is) defined elsewhere below. This cleanup restores valid syntax.
+
+// Helper function to format price range display
+const formatPriceRange = (priceRange) => {
+  const priceMap = {
+    'GHC': '💰',
+    'GHC GHC': '💰💰',
+    'GHC GHC GHC': '💰💰💰',
+    'GHC GHC GHC GHC': '💰💰💰💰'
+  };
+  return priceMap[priceRange] || '💰💰';
+};
+
+// Global (non-cart) application context
 const AppContext = createContext();
 
-// Provider component to wrap the entire app
 export const AppProvider = ({ children }) => {
   const [restaurants, setRestaurants] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
-  const [cart, setCart] = useState([]);
+  const [popularCuisines, setPopularCuisines] = useState([]);
+  const [mealPeriods, setMealPeriods] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
-  const [addingToCart, setAddingToCart] = useState(null); // Track which item is being added
-  const [showCartPreview, setShowCartPreview] = useState(false); // Cart preview modal
-  const [itemQuantities, setItemQuantities] = useState({}); // Track quantity for each item
 
   const API_BASE_URL = 'http://localhost:8000/api';
 
-  // Show toast notification
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type, id: Date.now() });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  // Add item to cart
-  const addToCart = (item) => {
-    setAddingToCart(item.id); // Set loading state
-    
-    // Simulate brief loading for better UX
-    setTimeout(() => {
-      const quantityToAdd = item.quantity || 1;
-      const existingItem = cart.find(cartItem => cartItem.id === item.id);
-      
-      if (existingItem) {
-        setCart(cart.map(cartItem => 
-          cartItem.id === item.id 
-            ? { ...cartItem, quantity: cartItem.quantity + quantityToAdd }
-            : cartItem
-        ));
-        showToast(quantityToAdd === 1 
-          ? `Added another ${item.name} to cart!` 
-          : `Added ${quantityToAdd} more ${item.name} to cart!`, 'success');
-      } else {
-        setCart([...cart, { ...item, quantity: quantityToAdd }]);
-        showToast(quantityToAdd === 1 
-          ? `${item.name} added to cart!` 
-          : `${quantityToAdd} ${item.name} added to cart!`, 'success');
-      }
-      
-      // Show cart preview briefly
-      setShowCartPreview(true);
-      setTimeout(() => setShowCartPreview(false), 3000);
-      
-      setAddingToCart(null); // Clear loading state
-    }, 300); // Brief delay for visual feedback
-  };
-
-  // Remove item from cart
-  const removeFromCart = (itemId) => {
-    const item = cart.find(cartItem => cartItem.id === itemId);
-    setCart(cart.filter(item => item.id !== itemId));
-    if (item) {
-      showToast(`${item.name} removed from cart`, 'info');
+  const showToast = (message, type = 'info', duration = 3000) => {
+    setToast({ message, type });
+    if (duration > 0) {
+      setTimeout(() => setToast(null), duration);
     }
-  };
-
-  // Update item quantity in cart
-  const updateCartQuantity = (itemId, quantity) => {
-    if (quantity <= 0) {
-      removeFromCart(itemId);
-    } else {
-      setCart(cart.map(item => 
-        item.id === itemId ? { ...item, quantity } : item
-      ));
-    }
-  };
-
-  // Get cart total
-  const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (parseFloat(item.price) * item.quantity), 0);
-  };
-
-  // Get cart item count
-  const getCartItemCount = () => {
-    return cart.reduce((total, item) => total + item.quantity, 0);
-  };
-
-  // Function to add item to cart with specified quantity
-  const addItemToCart = (item, quantity = 1) => {
-    // Create a new item with the specified quantity
-    const itemToAdd = { ...item, quantity: parseInt(quantity) || 1 };
-    addToCart(itemToAdd);
-    // Reset quantity to 1 after adding
-    setItemQuantities(prev => ({ ...prev, [item.id]: 1 }));
-  };
-
-  // Function to update item quantity
-  const updateItemQuantity = (itemId, quantity) => {
-    if (quantity < 1) quantity = 1;
-    if (quantity > 99) quantity = 99;
-    setItemQuantities(prev => ({ ...prev, [itemId]: quantity }));
-  };
-
-  // Function to get quantity for an item (default 1)
-  const getItemQuantity = (itemId) => {
-    return itemQuantities[itemId] || 1;
   };
 
   const value = {
@@ -117,8 +61,10 @@ export const AppProvider = ({ children }) => {
     setRestaurants,
     menuItems,
     setMenuItems,
-    cart,
-    setCart,
+    popularCuisines,
+    setPopularCuisines,
+    mealPeriods,
+    setMealPeriods,
     user,
     setUser,
     loading,
@@ -127,192 +73,136 @@ export const AppProvider = ({ children }) => {
     setError,
     toast,
     showToast,
-    addingToCart,
-    showCartPreview,
-    setShowCartPreview,
-    itemQuantities,
-    setItemQuantities,
-    API_BASE_URL,
-    addToCart,
-    addItemToCart,
-    updateItemQuantity,
-    getItemQuantity,
-    removeFromCart,
-    updateCartQuantity,
-    getCartTotal,
-    getCartItemCount
+    API_BASE_URL
   };
 
   return (
     <AppContext.Provider value={value}>
-      {children}
-      {/* Toast Notifications */}
+      {/* Toast notification */}
       {toast && (
-        <div 
-          className={`toast show position-fixed m-3`}
-          style={{ 
-            zIndex: 1060,
-            top: '20px',
-            right: '20px',
-            minWidth: '350px',
-            maxWidth: '400px',
-            animation: 'slideInRight 0.3s ease-out'
-          }}
-          role="alert"
-          aria-live="assertive"
-          aria-atomic="true"
+        <div
+          className={`toast-container position-fixed top-0 start-50 translate-middle-x p-3`}
+          style={{ zIndex: 2000 }}
         >
-          <div className={`toast-header bg-${toast.type === 'success' ? 'success' : toast.type === 'error' ? 'danger' : 'info'} text-white`}>
-            <strong className="me-auto">
-              {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'} 
-              {toast.type === 'success' ? 'Added to Cart!' : toast.type === 'error' ? 'Error' : 'Info'}
-            </strong>
-            <button 
-              type="button" 
-              className="btn-close btn-close-white" 
-              onClick={() => setToast(null)}
-              aria-label="Close"
-            ></button>
-          </div>
-          <div className="toast-body p-3">
-            <div className="mb-2">{toast.message}</div>
-            {toast.type === 'success' && (
-              <div className="d-flex gap-2 mt-2">
-                <button 
-                  className="btn btn-primary btn-sm flex-fill"
-                  onClick={() => {
-                    setToast(null);
-                    window.location.href = '/cart';
-                  }}
-                >
-                  🛒 View Cart
-                </button>
-                <button 
-                  className="btn btn-outline-secondary btn-sm flex-fill"
-                  onClick={() => setToast(null)}
-                >
-                  Continue Shopping
-                </button>
-              </div>
-            )}
+          <div className={`alert alert-${toast.type === 'error' ? 'danger' : toast.type === 'success' ? 'success' : 'info'} mb-2`}>
+            {toast.message}
           </div>
         </div>
       )}
-      
-      {/* Quick Cart Preview Modal */}
-      {showCartPreview && cart.length > 0 && (
-        <div 
-          className="position-fixed"
-          style={{
-            bottom: '20px',
-            right: '20px',
-            zIndex: 1055,
-            animation: 'slideInUp 0.3s ease-out'
-          }}
-        >
-          <div className="card shadow-lg border-0" style={{ minWidth: '320px', maxWidth: '400px' }}>
-            <div className="card-header bg-success text-white d-flex justify-content-between align-items-center">
-              <h6 className="mb-0">🛒 Cart Preview</h6>
-              <button 
-                className="btn-close btn-close-white btn-sm"
-                onClick={() => setShowCartPreview(false)}
-                aria-label="Close cart preview"
-              ></button>
-            </div>
-            <div className="card-body p-3">
-              <div className="small mb-2 text-muted">
-                {getCartItemCount()} item{getCartItemCount() !== 1 ? 's' : ''} • ${getCartTotal().toFixed(2)} total
-              </div>
-              <div className="max-height-150 overflow-auto">
-                {cart.slice(0, 3).map(item => (
-                  <div key={item.id} className="d-flex align-items-center gap-2 mb-2">
-                    <img 
-                      src={item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=40&h=40&fit=crop'}
-                      alt={item.name}
-                      className="rounded"
-                      style={{ width: '40px', height: '40px', objectFit: 'cover' }}
-                    />
-                    <div className="flex-grow-1">
-                      <div className="small fw-bold">{item.name}</div>
-                      <div className="small text-muted">{item.quantity}x ${item.price}</div>
-                    </div>
-                  </div>
-                ))}
-                {cart.length > 3 && (
-                  <div className="small text-muted text-center">
-                    +{cart.length - 3} more item{cart.length - 3 !== 1 ? 's' : ''}
-                  </div>
-                )}
-              </div>
-              <div className="d-grid mt-3">
-                <button 
-                  className="btn btn-primary btn-sm"
-                  onClick={() => {
-                    setShowCartPreview(false);
-                    window.location.href = '/cart';
-                  }}
-                >
-                  View Full Cart
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {children}
     </AppContext.Provider>
   );
 };
 
-// Custom hook to use the context
+// Popular Cuisines page
+const PopularCuisinesPage = () => {
+  const { popularCuisines, restaurants } = useApp();
+  const { name } = useParams();
+  const navigate = useNavigate();
+
+  const decoded = name ? decodeURIComponent(name) : '';
+  const filtered = decoded
+    ? (restaurants || []).filter(r => (r.cuisine_type || '').toLowerCase().includes(decoded.toLowerCase()))
+    : [];
+
+  return (
+    <div className="container mt-4">
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h2 className="mb-0">{decoded ? `${decoded} Restaurants` : 'Popular Cuisines'}</h2>
+        <div>
+          {decoded ? (
+            <button className="btn btn-outline-secondary" onClick={() => navigate('/cuisines')}>All Cuisines</button>
+          ) : (
+            <button className="btn btn-outline-secondary" onClick={() => navigate('/')}>Home</button>
+          )}
+        </div>
+      </div>
+
+      {!decoded && (
+        <div className="popular-cuisines-section mb-4">
+          <div className="cuisines-grid">
+            {(popularCuisines || []).map(cuisine => (
+              <Link
+                key={cuisine.name}
+                to={`/cuisines/${encodeURIComponent(cuisine.name)}`}
+                className="cuisine-card text-decoration-none"
+                aria-label={`View restaurants for ${cuisine.name}`}
+              >
+                <div className="cuisine-emoji">{cuisine.emoji}</div>
+                <h5 className="cuisine-name">{cuisine.name}</h5>
+                <div className="cuisine-meta">
+                  <span className="cuisine-count">{cuisine.restaurant_count} {cuisine.restaurant_count === 1 ? 'restaurant' : 'restaurants'}</span>
+                  {cuisine.avg_rating > 0 && (
+                    <span className="cuisine-rating">⭐ {cuisine.avg_rating}</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {decoded && (
+        <div className="row">
+          {filtered.length > 0 ? (
+            filtered.map(r => (
+              <RestaurantCard key={r.id} restaurant={r} />
+            ))
+          ) : (
+            <div className="col-12 text-center py-5">
+              <h4 className="text-muted">No restaurants found for {decoded}</h4>
+              <p>Try viewing all cuisines or explore other categories.</p>
+              <button className="btn btn-primary" onClick={() => navigate('/cuisines')}>Browse All Cuisines</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const useApp = () => {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useApp must be used within an AppProvider');
+  return ctx;
 };
 
-// Modal Portal Component to render modal outside card hierarchy
+// Modal portal component with safe styles on close to prevent invisible overlay
 const ModalPortal = ({ children, isOpen }) => {
-  if (!isOpen) return null;
-  
-  // Create modal container if it doesn't exist
-  let modalContainer = document.getElementById('modal-root');
-  if (!modalContainer) {
-    modalContainer = document.createElement('div');
-    modalContainer.id = 'modal-root';
-    modalContainer.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 9999;
-      pointer-events: none;
-    `;
-    document.body.appendChild(modalContainer);
+  let container = document.getElementById('modal-root');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'modal-root';
+    document.body.appendChild(container);
   }
-  
-  return ReactDOM.createPortal(children, modalContainer);
+  if (!isOpen) {
+    // Ensure the container cannot intercept clicks when no modal is open
+    container.style.cssText = 'display:none;pointer-events:none;';
+    return null;
+  }
+  container.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;pointer-events:auto;display:block;';
+  return ReactDOM.createPortal(children, container);
 };
 
-// Navigation component
+// Navbar component (restored minimal version)
 const Navbar = () => {
-  const { getCartItemCount, user } = useApp();
+  const { user } = useApp();
+  const { getCartItemCount } = useCart();
   const [isNavCollapsed, setIsNavCollapsed] = useState(true);
-
+  const location = useLocation();
   const handleNavCollapse = () => setIsNavCollapsed(!isNavCollapsed);
-  
+  // Auto-collapse on route change for seamless navigation
+  useEffect(() => { setIsNavCollapsed(true); }, [location.pathname]);
+  // Removed debug console log
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
       <div className="container">
         <Link className="navbar-brand fw-bold" to="/" onClick={() => setIsNavCollapsed(true)}>
           🍽️ The Restaurant
         </Link>
-        
-        <button 
-          className="navbar-toggler" 
-          type="button" 
+        <button
+          className="navbar-toggler"
+          type="button"
           onClick={handleNavCollapse}
           aria-controls="navbarNav"
           aria-expanded={!isNavCollapsed}
@@ -320,54 +210,41 @@ const Navbar = () => {
         >
           <span className="navbar-toggler-icon"></span>
         </button>
-        
         <div className={`collapse navbar-collapse ${isNavCollapsed ? '' : 'show'}`} id="navbarNav">
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <Link className="nav-link" to="/" onClick={() => setIsNavCollapsed(true)}>
-                🏠 Home
-              </Link>
+              <Link data-testid="nav-home-link" className="nav-link" to="/" onClick={() => setIsNavCollapsed(true)}>🏠 Home</Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/restaurants" onClick={() => setIsNavCollapsed(true)}>
-                🏪 Restaurants
-              </Link>
+              <Link data-testid="nav-restaurants-link" className="nav-link" to="/restaurants" onClick={() => setIsNavCollapsed(true)}>🏪 Restaurants</Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/menu" onClick={() => setIsNavCollapsed(true)}>
-                📋 Menu
-              </Link>
+              <Link data-testid="nav-menu-link" className="nav-link" to="/menu" onClick={() => setIsNavCollapsed(true)}>📋 Menu</Link>
             </li>
           </ul>
-          
           <div className="d-flex align-items-center">
             {user ? (
               <span className="navbar-text me-3">Welcome, {user.username}!</span>
             ) : (
-              <Link 
-                to="/login" 
+              <Link
+                to="/login"
                 className="btn btn-outline-light me-2"
                 onClick={() => setIsNavCollapsed(true)}
-              >
-                🔐 Login
-              </Link>
+              >🔐 Login</Link>
             )}
-            
-            <Link 
-              to="/cart" 
+            <Link
+              to="/cart"
               className="btn btn-warning position-relative"
               onClick={() => setIsNavCollapsed(true)}
               aria-label={`Shopping cart with ${getCartItemCount()} items`}
             >
               🛒 Cart
               {getCartItemCount() > 0 && (
-                <span 
+                <span
                   key={getCartItemCount()}
                   className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger cart-badge-animation"
                   aria-label={`${getCartItemCount()} items in cart`}
-                  style={{
-                    animation: 'cartBounce 0.6s ease-out'
-                  }}
+                  style={{ animation: 'cartBounce 0.6s ease-out' }}
                 >
                   {getCartItemCount()}
                 </span>
@@ -427,11 +304,10 @@ const SearchAndFilter = ({ onSearch, onFilter }) => {
             onChange={handleCuisineFilter}
           >
             <option value="">All Cuisines</option>
-            <option value="Italian">Italian</option>
-            <option value="Chinese">Chinese</option>
-            <option value="Mexican">Mexican</option>
-            <option value="Indian">Indian</option>
-            <option value="American">American</option>
+            <option value="Japanese">🍣 Japanese</option>
+            <option value="Italian">🍝 Italian</option>
+            <option value="Vegetarian">🥗 Vegetarian</option>
+            <option value="Continental">🍽️ Continental</option>
           </select>
         </div>
         
@@ -442,9 +318,10 @@ const SearchAndFilter = ({ onSearch, onFilter }) => {
             onChange={handlePriceFilter}
           >
             <option value="">All Prices</option>
-            <option value="budget">$ Budget</option>
-            <option value="moderate">$$ Moderate</option>
-            <option value="expensive">$$$ Expensive</option>
+            <option value="GHC">💰 Budget (GHC)</option>
+            <option value="GHC GHC">💰💰 Moderate (GHC GHC)</option>
+            <option value="GHC GHC GHC">💰💰💰 Expensive (GHC GHC GHC)</option>
+            <option value="GHC GHC GHC GHC">💰💰💰💰 Premium (GHC GHC GHC GHC)</option>
           </select>
         </div>
       </div>
@@ -452,35 +329,7 @@ const SearchAndFilter = ({ onSearch, onFilter }) => {
   );
 };
 
-// Loading skeleton component for better UX during data loading
-const SkeletonCard = () => (
-  <div className="col-md-6 col-lg-4 mb-4">
-    <div className="card h-100 shadow-sm">
-      <div className="placeholder-glow">
-        <div className="placeholder bg-secondary" style={{ height: '200px', width: '100%' }}></div>
-      </div>
-      <div className="card-body">
-        <h5 className="card-title placeholder-glow">
-          <span className="placeholder col-6"></span>
-        </h5>
-        <p className="card-text placeholder-glow">
-          <span className="placeholder col-4"></span>
-        </p>
-        <p className="card-text placeholder-glow">
-          <span className="placeholder col-8"></span>
-          <span className="placeholder col-6"></span>
-        </p>
-        <div className="placeholder-glow mt-3">
-          <span className="placeholder col-4 me-2"></span>
-          <span className="placeholder col-3"></span>
-        </div>
-        <div className="placeholder-glow mt-2">
-          <span className="placeholder col-12 btn btn-primary disabled"></span>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+// Removed unused SkeletonCard component (was not referenced)
 
 // Helper function to get cuisine-specific placeholder image
 const getCuisinePlaceholder = (cuisineType) => {
@@ -499,18 +348,70 @@ const getCuisinePlaceholder = (cuisineType) => {
   return cuisineImages[cuisineType] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop&crop=center';
 };
 
+// Cart Progress Indicator Component - separate for better reactivity
+const CartProgressIndicator = ({ closeMenuModal }) => {
+  const { getCartItemCount, getCartTotal, cart, setShowCartPreview } = useCart();
+  const navigate = useNavigate();
+  const [, forceUpdate] = useState(0);
+  
+  // Force re-render when cart changes
+  useEffect(() => {
+    // cart changed length: placeholder for potential analytics
+    forceUpdate(prev => prev + 1);
+  }, [cart]);
+  
+  // Capture cart metrics for display
+  const cartCount = getCartItemCount();
+  const cartTotal = getCartTotal();
+  
+  // CartProgressIndicator render trace removed
+  
+  if (cartCount === 0) return null;
+  
+  return (
+    <div className="cart-progress-indicator">
+      <div className="d-flex align-items-center justify-content-center mb-1">
+        <span className="badge bg-success fs-6 me-2">
+          🛒 {cartCount} item{cartCount !== 1 ? 's' : ''}
+        </span>
+        <span className="fw-bold text-success">
+          ${cartTotal.toFixed(2)}
+        </span>
+      </div>
+      <button 
+        className="btn btn-success btn-sm"
+        data-testid="cart-progress-view-cart"
+        aria-label={`View cart with ${cartCount} items, total $${cartTotal.toFixed(2)}`}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          // view cart button clicked
+          
+          // First, hide the cart preview if it's showing
+          setShowCartPreview(false);
+          
+          // Close the restaurant menu modal
+          closeMenuModal();
+          
+          // Navigate to cart page
+          setTimeout(() => {
+            // navigating to cart page
+            navigate('/cart');
+          }, 100);
+        }}
+      >
+        View Cart →
+      </button>
+    </div>
+  );
+};
+
 // Restaurant Card component
-const RestaurantCard = ({ restaurant, showMenu = false }) => {
-  const { 
-    addToCart, 
-    addingToCart, 
-    menuItems, 
-    getCartItemCount, 
-    getCartTotal,
-    addItemToCart,
-    updateItemQuantity,
-    getItemQuantity
-  } = useApp();
+const RestaurantCard = ({ restaurant }) => {
+  const { menuItems } = useApp();
+  const { addingToCart, addItemToCart, updateItemQuantity, getItemQuantity, getCartItemCount } = useCart();
+  
+  // RestaurantCard render trace removed
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [restaurantMenu, setRestaurantMenu] = useState([]);
@@ -543,9 +444,8 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
         setLoadingMenu(false);
       }
       
-      // Add body scroll lock
-      document.body.style.overflow = 'hidden';
-      document.body.classList.add('modal-open');
+      // Removed global body scroll lock to keep page scroll functional
+      // If needed in future, implement conditional lock with restore on close
       
       setShowModal(true);
       setIsOpening(false);
@@ -556,14 +456,14 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
   };
 
   const closeMenuModal = (e) => {
-    console.log('closeMenuModal called');
+    // closeMenuModal invoked
     // Prevent event bubbling
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     
-    // Restore body scroll
+    // Ensure any previous attempts to lock scroll are cleared (defensive)
     document.body.style.overflow = '';
     document.body.classList.remove('modal-open');
     
@@ -593,6 +493,7 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
       document.removeEventListener('keydown', handleEscKey, true);
       // Restore body scroll on cleanup
       document.body.style.overflow = '';
+      document.body.classList.remove('modal-open');
     };
   }, [showModal]);
 
@@ -600,8 +501,18 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
   React.useEffect(() => {
     return () => {
       document.body.style.overflow = '';
+      document.body.classList.remove('modal-open');
     };
   }, []);
+
+  // Ensure modal closes and scroll restored on route changes
+  const location = useLocation();
+  React.useEffect(() => {
+    if (showModal) {
+      closeMenuModal();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   const handleImageError = () => {
     setImageError(true);
@@ -629,67 +540,120 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
 
   return (
     <div className="col-md-6 col-lg-4 mb-4">
-      <div className="card h-100 shadow-sm restaurant-card">
-        <div style={{ height: '300px', width: '100%', overflow: 'hidden', position: 'relative', margin: '0', aspectRatio: '1/1' }}>
-          <img 
-            src={getImageSrc()}
-            className="card-img-top" 
-            alt={restaurant.name}
-            style={{ 
-              height: '300px', 
-              width: '100%',
-              objectFit: 'cover',
-              minHeight: '300px',
-              maxHeight: '300px',
-              position: 'absolute',
-              top: '0',
-              left: '0',
-              aspectRatio: '1/1',
-              margin: '0',
-              padding: '0'
-            }}
-            onError={handleImageError}
-            loading="lazy"
-          />
+      <div className="card h-100 border-0 shadow restaurant-card">
+        {/* Image with Overlay */}
+        <div className="restaurant-image-container">
+          <Link 
+            to={`/restaurants/${restaurant.slug || restaurant.id}`}
+            className="d-block position-relative"
+            aria-label={`Open details for ${restaurant.name}`}
+          >
+            <img 
+              src={getImageSrc()}
+              className="card-img-top" 
+              alt={restaurant.name}
+              onError={handleImageError}
+              loading="lazy"
+            />
+            {/* Gradient Overlay */}
+            <div className="restaurant-gradient-overlay"></div>
+          </Link>
+          {/* Floating Badges */}
+          <div className="restaurant-badges-container">
+            <span className="badge restaurant-rating-badge">
+              ⭐ {restaurant.rating || '4.5'}
+            </span>
+            <span className="badge restaurant-price-badge">
+              {formatPriceRange(restaurant.price_range)}
+            </span>
+          </div>
         </div>
         
-        <div className="card-body d-flex flex-column">
-          <h5 className="card-title">{restaurant.name}</h5>
-          <p className="card-text text-muted small">{restaurant.cuisine_type}</p>
-          <p className="card-text flex-grow-1">{restaurant.description}</p>
-          
+        <div className="card-body d-flex flex-column" style={{ padding: '1.5rem' }}>
+          {/* Header */}
           <div className="mb-2">
-            <small className="text-muted">
-              📍 {restaurant.address}
-            </small>
+            <h5 className="card-title mb-2" style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1a1a1a', lineHeight: '1.3' }}>
+              <Link 
+                to={`/restaurants/${restaurant.slug || restaurant.id}`}
+                className="text-decoration-none"
+                aria-label={`View details for ${restaurant.name}`}
+                style={{ color: 'inherit' }}
+              >
+                {restaurant.name}
+              </Link>
+            </h5>
+            <span className="badge" style={{
+              backgroundColor: '#f3f4f6',
+              color: '#6b7280',
+              padding: '4px 12px',
+              fontSize: '0.8rem',
+              fontWeight: '500',
+              borderRadius: '6px'
+            }}>
+              {restaurant.cuisine_type}
+            </span>
           </div>
           
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <div>
-              <span className="badge bg-warning text-dark">
-                ⭐ {restaurant.rating || '4.5'}
-              </span>
-              <span className="ms-2 text-success fw-bold">
-                {restaurant.price_range || '$$'}
-              </span>
+          {/* Description */}
+          <p className="card-text text-muted mb-2" style={{ 
+            fontSize: '0.875rem', 
+            lineHeight: '1.6',
+            color: '#6b7280',
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: '2',
+            WebkitBoxOrient: 'vertical',
+            minHeight: '2.8rem'
+          }}>
+            {restaurant.description}
+          </p>
+          
+          {/* Info Grid */}
+          <div className="mb-2 restaurant-info-grid">
+            <div className="d-flex align-items-center restaurant-info-item">
+              <span style={{ marginRight: '8px', fontSize: '1rem' }}>📍</span>
+              <span style={{ 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap' 
+              }}>{restaurant.address}</span>
             </div>
-            <div>
-              {restaurant.delivery_fee && (
-                <small className="text-muted">Delivery: ${restaurant.delivery_fee}</small>
-              )}
-            </div>
+            {restaurant.delivery_fee && (
+              <div className="d-flex align-items-center restaurant-info-delivery">
+                <span style={{ marginRight: '8px', fontSize: '1rem' }}>🚚</span>
+                <span>Free delivery over GHC 50</span>
+              </div>
+            )}
           </div>
           
-          <div className="mt-auto">
+          {/* Action Buttons */}
+          <div className="mt-auto d-flex gap-2">
+            <Link 
+              to={`/restaurants/${restaurant.slug || restaurant.id}`}
+              className="btn btn-outline-primary"
+              aria-label={`View details for ${restaurant.name}`}
+            >
+              View Details
+            </Link>
             <button 
-              className="btn btn-primary w-100 mb-2"
+              className="btn restaurant-view-menu-btn"
               onClick={openMenuModal}
               disabled={loadingMenu || showModal || isOpening}
               type="button"
             >
-              {loadingMenu ? 'Loading...' : 
-               isOpening ? 'Opening...' :
-               showModal ? 'Modal Open' : 'View Menu'} 🍽️
+              {loadingMenu ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Loading...
+                </>
+              ) : isOpening ? (
+                'Opening...'
+              ) : (
+                <>
+                  <span className="me-2">🍽️</span>
+                  View Menu
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -738,11 +702,12 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
                         </div>
                       </div>
                       <div className="col-auto">
-                        <button 
+                        {/* cart count render */}
+                        <button
                           type="button" 
                           className="btn btn-outline-light rounded-circle" 
                           onClick={(e) => {
-                            console.log('Close button clicked');
+                            // close button clicked
                             closeMenuModal(e);
                           }}
                           aria-label="Close"
@@ -765,7 +730,7 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
                     </div>
                   </div>
                 </div>
-                <div className="modal-body p-4" style={{ overflowY: 'auto' }}>
+                <div className="modal-body p-4" style={{ overflowY: 'auto', flex: '1 1 auto' }}>
                   {loadingMenu ? (
                     <div className="text-center py-5">
                       <div className="spinner-border text-primary" role="status" style={{ width: '4rem', height: '4rem' }}>
@@ -787,7 +752,7 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
                                 ⭐ {restaurant.rating || '4.5'}
                               </span>
                               <span className="badge bg-info">
-                                {restaurant.price_range || '$$'}
+                                {formatPriceRange(restaurant.price_range)}
                               </span>
                             </div>
                           </div>
@@ -944,28 +909,22 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
                       
                       {/* Cart Progress Indicator */}
                       <div className="col-md-4 text-center">
-                        {getCartItemCount() > 0 && (
-                          <div className="cart-progress-indicator">
-                            <div className="d-flex align-items-center justify-content-center mb-1">
-                              <span className="badge bg-success fs-6 me-2">
-                                🛒 {getCartItemCount()} item{getCartItemCount() !== 1 ? 's' : ''}
-                              </span>
-                              <span className="fw-bold text-success">
-                                ${getCartTotal().toFixed(2)}
-                              </span>
-                            </div>
-                            <Link 
-                              to="/cart"
-                              className="btn btn-success btn-sm"
-                              onClick={closeMenuModal}
-                            >
-                              View Cart →
-                            </Link>
-                          </div>
-                        )}
+                        <CartProgressIndicator closeMenuModal={closeMenuModal} />
                       </div>
                       
                       <div className="col-md-4 text-end">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary me-3"
+                          data-testid="modal-restaurants-btn"
+                          onClick={() => {
+                            // Navigate to restaurants and ensure modal closes
+                            closeMenuModal();
+                            navigate('/restaurants');
+                          }}
+                        >
+                          🏪 Restaurants
+                        </button>
                         <button 
                           type="button" 
                           className="btn btn-outline-primary me-3" 
@@ -1003,39 +962,68 @@ const RestaurantCard = ({ restaurant, showMenu = false }) => {
 
 // Home page component
 const Home = () => {
-  const { restaurants, setRestaurants, setMenuItems, loading, setLoading, error, setError, API_BASE_URL } = useApp();
+  const { restaurants, setRestaurants, menuItems, setMenuItems, popularCuisines, setPopularCuisines, mealPeriods, setMealPeriods, loading, setLoading, error, setError, API_BASE_URL } = useApp();
   const [filteredRestaurants, setFilteredRestaurants] = useState([]);
+  const [loadingMealPeriods, setLoadingMealPeriods] = useState(false);
   const navigate = useNavigate();
 
   const loadData = async () => {
-    setLoading(true);
+    const needRestaurants = !restaurants || restaurants.length === 0;
+    const needMenu = !menuItems || menuItems.length === 0;
+    if (!needRestaurants && !needMenu) {
+      return;
+    }
+    if (needRestaurants) setLoading(true);
     try {
-      // Load restaurants
-      const restaurantsResponse = await axios.get(`${API_BASE_URL}/restaurants/restaurants/`);
-      // Handle paginated response
-      const restaurantsData = restaurantsResponse.data.results || restaurantsResponse.data;
-      setRestaurants(restaurantsData);
-      
-      // Load menu items
-      try {
-        const menuResponse = await axios.get(`${API_BASE_URL}/restaurants/menu-items/`);
-        // Handle paginated response
-        const menuData = menuResponse.data.results || menuResponse.data;
-        setMenuItems(menuData);
-      } catch (menuError) {
-        setMenuItems([]);
+      if (needRestaurants) {
+        const restaurantsResponse = await axios.get(`${API_BASE_URL}/restaurants/`);
+        const restaurantsData = restaurantsResponse.data.results || restaurantsResponse.data;
+        setRestaurants(restaurantsData);
+        setError(null);
       }
-      
-      setError(null);
+      if (needMenu) {
+        try {
+          const menuResponse = await axios.get(`${API_BASE_URL}/menu-items/`);
+          const menuData = menuResponse.data.results || menuResponse.data;
+          setMenuItems(menuData);
+        } catch (menuError) {
+          setMenuItems([]);
+        }
+      }
     } catch (err) {
       setError('Failed to load restaurants. Please try again.');
     } finally {
-      setLoading(false);
+      if (needRestaurants) setLoading(false);
+    }
+  };
+
+  const loadMealPeriods = async () => {
+    if (mealPeriods && mealPeriods.length > 0) return;
+    setLoadingMealPeriods(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/menu-items/meal-periods/`);
+      setMealPeriods(response.data);
+    } catch (err) {
+      // Failed to load meal periods
+    } finally {
+      setLoadingMealPeriods(false);
+    }
+  };
+
+  const loadPopularCuisines = async () => {
+    if (popularCuisines && popularCuisines.length > 0) return;
+    try {
+      const response = await axios.get(`${API_BASE_URL}/restaurants/popular-cuisines/`);
+      setPopularCuisines(response.data);
+    } catch (err) {
+      // Failed to load popular cuisines
     }
   };
 
   useEffect(() => {
     loadData();
+    loadMealPeriods();
+    loadPopularCuisines();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1100,25 +1088,13 @@ const Home = () => {
   if (loading) {
     return (
       <div className="container mt-4">
-        {/* Hero Section */}
-        <div className="jumbotron bg-primary text-white p-5 rounded mb-4">
-          <h1 className="display-4">Welcome to The Restaurant</h1>
-          <p className="lead">Discover amazing restaurants and order your favorite dishes</p>
-          <button className="btn btn-warning btn-lg" disabled>
-            Explore Restaurants 🍽️
-          </button>
-        </div>
-
-        {/* Search and Filter */}
-        <SearchAndFilter onSearch={() => {}} onFilter={() => {}} />
-
+        <HeroSkeleton />
+        <SearchFilterSkeleton />
+        
         {/* Loading Skeletons */}
         <div className="row">
-          <div className="col-12 mb-3">
-            <h2>Loading Restaurants...</h2>
-          </div>
-          {[...Array(6)].map((_, index) => (
-            <SkeletonCard key={index} />
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <RestaurantCardSkeleton key={i} />
           ))}
         </div>
       </div>
@@ -1175,14 +1151,15 @@ const Home = () => {
         </div>
       )}
 
-      {/* Restaurants Grid */}
-      <div className="row">
+      {/* Featured Restaurants */}
+      <div className="row mb-5">
         <div className="col-12 mb-3">
           <h2>Featured Restaurants ({filteredRestaurants.length})</h2>
         </div>
         
         {filteredRestaurants.length > 0 ? (
-          filteredRestaurants.map(restaurant => {
+          // Show 4 featured restaurants instead of 3 (includes Nana Buruwaah)
+          filteredRestaurants.slice(0, 4).map(restaurant => {
             return (
               <RestaurantCard 
                 key={restaurant.id} 
@@ -1198,13 +1175,84 @@ const Home = () => {
           </div>
         )}
       </div>
+
+      {/* Popular Cuisines Section */}
+      {popularCuisines.length > 0 && (
+        <div className="popular-cuisines-section mb-5">
+          <h2 className="mb-4">Popular Cuisines</h2>
+          <div className="cuisines-grid">
+            {popularCuisines.slice(0, 8).map(cuisine => (
+              <Link
+                key={cuisine.name}
+                to={`/cuisines/${encodeURIComponent(cuisine.name)}`}
+                className="cuisine-card text-decoration-none"
+                data-testid={`popular-cuisine-${cuisine.name}`}
+                aria-label={`View restaurants for ${cuisine.name}`}
+              >
+                <div className="cuisine-emoji">{cuisine.emoji}</div>
+                <h5 className="cuisine-name">{cuisine.name}</h5>
+                <div className="cuisine-meta">
+                  <span className="cuisine-count">{cuisine.restaurant_count} {cuisine.restaurant_count === 1 ? 'restaurant' : 'restaurants'}</span>
+                  {cuisine.avg_rating > 0 && (
+                    <span className="cuisine-rating">⭐ {cuisine.avg_rating}</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Meal Periods Section */}
+      {!loadingMealPeriods && mealPeriods.length > 0 && (
+        <div className="meal-periods-section mb-5">
+          <h2 className="mb-4">Browse by Meal Time</h2>
+          {mealPeriods.map(period => (
+            <div key={period.period} className="meal-period-card mb-4">
+              <div className="meal-period-header d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <h3 className="mb-0">
+                    <span className="me-2">{period.emoji}</span>
+                    {period.name}
+                  </h3>
+                  <small className="text-muted">{period.time}</small>
+                </div>
+                <span className="badge bg-primary">{period.items.length} items</span>
+              </div>
+              <div className="meal-period-items">
+                <div className="horizontal-scroll">
+                  {period.items.slice(0, 6).map(item => (
+                    <Link
+                      key={item.id}
+                      to={`/menu-items/${encodeURIComponent(item.slug || item.id)}`}
+                      className="meal-item-card text-decoration-none"
+                      aria-label={`View details for ${item.name}`}
+                      data-testid={`meal-item-card-${item.id}`}
+                    >
+                      <img src={item.image} alt={item.name} className="meal-item-image" />
+                      <div className="meal-item-details">
+                        <h5 className="meal-item-name">{item.name}</h5>
+                        <p className="meal-item-restaurant text-muted small">{item.restaurant_name}</p>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className="meal-item-price">GHC {item.price}</span>
+                          {item.is_vegetarian && <span className="badge bg-success">🌱 Veg</span>}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
 
 // Restaurants page component
 const RestaurantsPage = () => {
-  const { restaurants, loading, setRestaurants, setLoading, setError, API_BASE_URL, menuItems, setMenuItems } = useApp();
+  const { restaurants, loading, setRestaurants, setLoading, setError, API_BASE_URL, menuItems, setMenuItems, error } = useApp();
 
   // Load restaurants if they haven't been loaded yet
   const loadRestaurants = async () => {
@@ -1214,7 +1262,7 @@ const RestaurantsPage = () => {
     
     setLoading(true);
     try {
-      const restaurantsResponse = await axios.get(`${API_BASE_URL}/restaurants/restaurants/`);
+      const restaurantsResponse = await axios.get(`${API_BASE_URL}/restaurants/`);
       const restaurantsData = restaurantsResponse.data.results || restaurantsResponse.data;
       setRestaurants(restaurantsData);
       setError(null);
@@ -1233,7 +1281,7 @@ const RestaurantsPage = () => {
     }
     
     try {
-      const menuResponse = await axios.get(`${API_BASE_URL}/restaurants/menu-items/`);
+      const menuResponse = await axios.get(`${API_BASE_URL}/menu-items/`);
       const menuData = menuResponse.data.results || menuResponse.data;
       setMenuItems(menuData);
     } catch (menuError) {
@@ -1250,12 +1298,11 @@ const RestaurantsPage = () => {
 
   if (loading) {
     return (
-      <div className="container mt-5">
-        <div className="text-center">
-          <div className="spinner-border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="mt-2">Loading amazing restaurants...</p>
+      <div className="container mt-4">
+        <div className="row">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <RestaurantCardSkeleton key={i} />
+          ))}
         </div>
       </div>
     );
@@ -1263,6 +1310,23 @@ const RestaurantsPage = () => {
 
   return (
     <div className="container mt-4">
+      {error && (
+        <div className="alert alert-danger alert-dismissible" role="alert">
+          <div className="d-flex align-items-center">
+            <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+            <div>
+              <strong>Oops! Something went wrong</strong>
+              <div>{error}</div>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            className="btn-close" 
+            onClick={() => setError(null)}
+            aria-label="Close"
+          ></button>
+        </div>
+      )}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h1>🏪 All Restaurants</h1>
@@ -1287,15 +1351,14 @@ const RestaurantsPage = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-5">
+        <div className="empty-state" role="status" aria-live="polite">
+          <span className="empty-icon" aria-hidden="true">🔎</span>
           <h3 className="text-muted">No restaurants found</h3>
-          <p>Please try refreshing the page or check back later.</p>
-          <button className="btn btn-primary" onClick={() => {
-            loadRestaurants();
-            loadMenuItems();
-          }}>
-            🔄 Try Again
-          </button>
+          <p className="mb-3">Please try refreshing, or check back later.</p>
+          <div className="empty-actions">
+            <button className="btn btn-primary" onClick={() => { loadRestaurants(); loadMenuItems(); }}>🔄 Try Again</button>
+            <Link to="/" className="btn btn-outline-secondary">🏠 Go Home</Link>
+          </div>
         </div>
       )}
     </div>
@@ -1303,7 +1366,8 @@ const RestaurantsPage = () => {
 };
 
 // Enhanced Menu Item Card Component
-const MenuItemCard = ({ item, onAddToCart }) => {
+const MenuItemCard = ({ item }) => {
+  const { addToCart } = useCart();
   const getSpiceLevel = (level) => {
     const spices = ['🌶️', '🌶️🌶️', '🌶️🌶️🌶️', '🌶️🌶️🌶️🌶️'];
     return level > 0 ? spices[level - 1] || '🌶️🌶️🌶️🌶️' : '';
@@ -1405,7 +1469,7 @@ const MenuItemCard = ({ item, onAddToCart }) => {
             <span className="h5 text-success mb-0">${parseFloat(item.price).toFixed(2)}</span>
             <button 
               className={`btn ${item.is_available ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => onAddToCart(item)}
+              onClick={() => addToCart(item)}
               disabled={!item.is_available}
             >
               {item.is_available ? '🛒 Add to Cart' : 'Unavailable'}
@@ -1419,7 +1483,7 @@ const MenuItemCard = ({ item, onAddToCart }) => {
 
 // Enhanced Menu Page with Search and Filters
 const MenuPage = () => {
-  const { menuItems, addToCart, loading, restaurants, setMenuItems, setLoading, setError, API_BASE_URL } = useApp();
+  const { menuItems, loading, restaurants, setMenuItems, setLoading, setError, API_BASE_URL, error } = useApp();
   
   const [filteredItems, setFilteredItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1445,7 +1509,7 @@ const MenuPage = () => {
     
     setLoading(true);
     try {
-      const menuResponse = await axios.get(`${API_BASE_URL}/restaurants/menu-items/`);
+      const menuResponse = await axios.get(`${API_BASE_URL}/menu-items/`);
       const menuData = menuResponse.data.results || menuResponse.data;
       setMenuItems(menuData);
       setError(null);
@@ -1548,6 +1612,23 @@ const MenuPage = () => {
 
   return (
     <div className="container mt-4">
+      {error && (
+        <div className="alert alert-danger alert-dismissible" role="alert">
+          <div className="d-flex align-items-center">
+            <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+            <div>
+              <strong>Failed to load menu</strong>
+              <div>{error}</div>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            className="btn-close" 
+            onClick={() => setError(null)}
+            aria-label="Close"
+          ></button>
+        </div>
+      )}
       {/* Header */}
       <div className="row mb-4">
         <div className="col-12 d-flex justify-content-between align-items-center">
@@ -1657,14 +1738,20 @@ const MenuPage = () => {
             filteredItems.map(item => (
               <MenuItemCard 
                 key={item.id} 
-                item={item} 
-                onAddToCart={addToCart}
+                item={item}
               />
             ))
           ) : (
-            <div className="col-12 text-center py-5">
-              <h3 className="text-muted">No menu items found</h3>
-              <p>Try adjusting your search or filter criteria</p>
+            <div className="col-12">
+              <div className="empty-state" role="status" aria-live="polite">
+                <span className="empty-icon" aria-hidden="true">🍽️</span>
+                <h3 className="text-muted">No menu items found</h3>
+                <p className="mb-3">Try adjusting your search or filters.</p>
+                <div className="empty-actions">
+                  <button className="btn btn-outline-primary" onClick={() => setSearchTerm('')}>Clear Search</button>
+                  <button className="btn btn-outline-secondary" onClick={() => { setDietaryFilter(''); setRestaurantFilter(''); }}>Reset Filters</button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1681,17 +1768,21 @@ const MenuPage = () => {
                   {groupedByRestaurant[restaurantName].map(item => (
                     <MenuItemCard 
                       key={item.id} 
-                      item={item} 
-                      onAddToCart={addToCart}
+                      item={item}
                     />
                   ))}
                 </div>
               </div>
             ))
           ) : (
-            <div className="text-center py-5">
+            <div className="empty-state" role="status" aria-live="polite">
+              <span className="empty-icon" aria-hidden="true">🍽️</span>
               <h3 className="text-muted">No menu items found</h3>
-              <p>Try adjusting your search or filter criteria</p>
+              <p className="mb-3">Try adjusting your search or filters.</p>
+              <div className="empty-actions">
+                <button className="btn btn-outline-primary" onClick={() => setSearchTerm('')}>Clear Search</button>
+                <button className="btn btn-outline-secondary" onClick={() => { setDietaryFilter(''); setRestaurantFilter(''); }}>Reset Filters</button>
+              </div>
             </div>
           )}
         </div>
@@ -1700,169 +1791,200 @@ const MenuPage = () => {
   );
 };
 
-// Cart page component with improved UX
-const CartPage = () => {
-  const { cart, removeFromCart, updateCartQuantity, getCartTotal, showToast } = useApp();
+// Cart page (clean reconstruction)
+const formatCurrency = (value) => `GHC ${parseFloat(value).toFixed(2)}`;
 
-  const handleRemoveItem = (item) => {
-    removeFromCart(item.id);
-    showToast(`${item.name} removed from cart`, 'info');
+const CartPage = () => {
+  const { cart, removeFromCart, updateCartQuantity, getCartTotal } = useCart();
+  const navigate = useNavigate();
+
+  const deliveryFee = 3.99;
+  const taxRate = 0.085;
+  const subtotal = getCartTotal();
+  const tax = subtotal * taxRate;
+  const total = subtotal + deliveryFee + tax;
+
+  const clearCart = () => {
+    cart.forEach(i => removeFromCart(i.id));
   };
 
   if (cart.length === 0) {
     return (
-      <div className="container mt-4">
-        <div className="text-center py-5">
-          <div className="mb-4">
-            <i className="fas fa-shopping-cart fa-3x text-muted"></i>
-          </div>
-          <h2 className="mb-3">Your cart is empty</h2>
-          <p className="lead text-muted mb-4">Add some delicious items to get started!</p>
-          <div>
-            <Link to="/restaurants" className="btn btn-primary me-2">
-              🏪 Browse Restaurants
-            </Link>
-            <Link to="/menu" className="btn btn-outline-primary">
-              📋 View Menu
-            </Link>
-          </div>
+      <div className="container py-5 text-center">
+        <h1 className="mb-3" aria-label="Shopping Cart">🛒 Your Cart</h1>
+        <p className="lead text-muted mb-4">No items yet. Discover something tasty.</p>
+        <div className="d-flex justify-content-center gap-3">
+          <Link to="/restaurants" className="btn btn-primary">Browse Restaurants</Link>
+          <Link to="/menu" className="btn btn-outline-primary">View Menu</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4">
-      <div className="row">
-        <div className="col-12 mb-4">
-          <div className="d-flex justify-content-between align-items-center">
-            <h1>🛒 Shopping Cart</h1>
-            <span className="badge bg-primary fs-6 px-3 py-2">
-              {cart.length} item{cart.length !== 1 ? 's' : ''}
-            </span>
+    <div className="container py-4">
+      <div className="row g-4">
+        <div className="col-lg-8">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h1 className="h3 mb-0" aria-label="Shopping Cart">🛒 Your Cart</h1>
+            <div className="d-flex align-items-center gap-2">
+              <span className="badge bg-primary" aria-label={`Cart has ${cart.length} item${cart.length !== 1 ? 's' : ''}`}>{cart.length} item{cart.length !== 1 ? 's' : ''}</span>
+              <button
+                className="btn btn-sm btn-outline-danger"
+                onClick={clearCart}
+                aria-label="Clear all items from cart"
+                title="Clear all items"
+                data-testid="cart-clear-btn"
+              >Clear</button>
+            </div>
+          </div>
+          <div className="table-responsive">
+            <table className="table align-middle">
+              <thead>
+                <tr>
+                  <th scope="col" style={{width:'60px'}} aria-label="Item image" />
+                  <th scope="col">Item</th>
+                  <th scope="col" className="text-center" style={{width:'110px'}}>Price (each)</th>
+                  <th scope="col" className="text-center" style={{width:'150px'}}>Quantity</th>
+                  <th scope="col" className="text-end" style={{width:'120px'}}>Line Total</th>
+                  <th scope="col" className="text-end" style={{width:'80px'}} aria-label="Remove" />
+                </tr>
+              </thead>
+              <tbody>
+                {cart.map(item => {
+                  const lineTotal = parseFloat(item.price) * item.quantity;
+                  return (
+                    <tr
+                      key={item.id}
+                      className="cart-row"
+                      aria-label={`Cart item ${item.name}, quantity ${item.quantity}, total ${formatCurrency(lineTotal)}`}
+                    >
+                      <td>
+                        <img
+                          src={item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&h=100&fit=crop'}
+                          alt={item.name}
+                          className="rounded" style={{width:'50px',height:'50px',objectFit:'cover'}} />
+                      </td>
+                      <td>
+                        <div className="fw-semibold">{item.name}</div>
+                        {item.restaurant_name && (
+                          <div className="small text-muted">{item.restaurant_name}</div>
+                        )}
+                        <div className="small text-muted">{formatCurrency(item.price)} each</div>
+                      </td>
+                      <td className="text-center text-success">{formatCurrency(item.price)}</td>
+                      <td>
+                        <div className="input-group input-group-sm justify-content-center">
+                          <button
+                            className="btn btn-outline-secondary"
+                            onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                            aria-label={`Decrease quantity of ${item.name}`}
+                            title={`Decrease quantity of ${item.name}`}
+                            data-testid={`cart-decrease-${item.id}`}
+                            style={item.quantity <= 1 ? { opacity:0.45, color:'#6c757d' } : undefined}
+                          >−</button>
+                          <input
+                            type="number"
+                            className="form-control text-center cart-qty-input"
+                            value={item.quantity}
+                            min={1}
+                            max={99}
+                            onChange={(e) => {
+                              const parsed = parseInt(e.target.value, 10);
+                              const next = Math.max(1, Math.min(99, isNaN(parsed) ? 1 : parsed));
+                              updateCartQuantity(item.id, next);
+                            }}
+                            onBlur={(e) => {
+                              const parsed = parseInt(e.target.value, 10);
+                              const next = Math.max(1, Math.min(99, isNaN(parsed) ? 1 : parsed));
+                              if (next !== item.quantity) updateCartQuantity(item.id, next);
+                            }}
+                            style={{maxWidth:'60px'}}
+                            aria-label={`Quantity of ${item.name}`}
+                          />
+                          <button
+                            className="btn btn-outline-secondary"
+                            onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                            aria-label={`Increase quantity of ${item.name}`}
+                            title={`Increase quantity of ${item.name}`}
+                            data-testid={`cart-increase-${item.id}`}
+                          >+</button>
+                        </div>
+                      </td>
+                      <td className="text-end fw-semibold">{formatCurrency(lineTotal)}</td>
+                      <td className="text-end">
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => removeFromCart(item.id)}
+                          aria-label={`Remove ${item.name} from cart`}
+                          title={`Remove ${item.name}`}
+                          data-testid={`cart-remove-${item.id}`}
+                        >✕</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
-      
-      <div className="row">
-        <div className="col-lg-8">
-          {cart.map(item => (
-            <div key={item.id} className="card mb-3 cart-item">
-              <div className="card-body">
-                <div className="row align-items-center">
-                  <div className="col-md-2">
-                    <img 
-                      src={item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&h=100&fit=crop'}
-                      alt={item.name}
-                      className="img-fluid rounded"
-                      style={{ width: '80px', height: '80px', objectFit: 'cover' }}
-                    />
-                  </div>
-                  <div className="col-md-4">
-                    <h6 className="mb-1">{item.name}</h6>
-                    <p className="text-muted small mb-1">{item.description}</p>
-                    {item.restaurant_name && (
-                      <small className="text-primary">📍 {item.restaurant_name}</small>
-                    )}
-                  </div>
-                  <div className="col-md-2 text-center">
-                    <div className="fw-bold text-success">
-                      ${parseFloat(item.price).toFixed(2)}
-                    </div>
-                    <small className="text-muted">each</small>
-                  </div>
-                  <div className="col-md-2">
-                    <div className="input-group input-group-sm">
-                      <button 
-                        className="btn btn-outline-secondary"
-                        onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                        aria-label="Decrease quantity"
-                      >
-                        −
-                      </button>
-                      <input 
-                        type="number" 
-                        className="form-control text-center"
-                        value={item.quantity}
-                        onChange={(e) => updateCartQuantity(item.id, parseInt(e.target.value) || 1)}
-                        min="1"
-                        style={{ maxWidth: '60px' }}
-                      />
-                      <button 
-                        className="btn btn-outline-secondary"
-                        onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                        aria-label="Increase quantity"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                  <div className="col-md-2 text-end">
-                    <div className="fw-bold mb-2">
-                      ${(parseFloat(item.price) * item.quantity).toFixed(2)}
-                    </div>
-                    <button 
-                      className="btn btn-outline-danger btn-sm"
-                      onClick={() => handleRemoveItem(item)}
-                      aria-label={`Remove ${item.name} from cart`}
-                    >
-                      🗑️ Remove
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
         <div className="col-lg-4">
-          <div className="card sticky-top" style={{ top: '2rem' }}>
+          <div className="card shadow-sm position-sticky" style={{top:'1rem'}}>
             <div className="card-header bg-primary text-white">
-              <h5 className="mb-0">📋 Order Summary</h5>
+              <h5 className="mb-0">Order Summary</h5>
             </div>
             <div className="card-body">
               <div className="mb-3">
+                <label className="form-label small">Promo Code</label>
+                <div className="input-group input-group-sm">
+                  <input type="text" className="form-control" placeholder="Enter code" aria-label="Enter promo code" />
+                  <button className="btn btn-outline-secondary" disabled aria-disabled="true">Apply</button>
+                </div>
+              </div>
+              <ul className="list-unstyled mb-3 small" aria-label="Items summary">
                 {cart.map(item => (
-                  <div key={item.id} className="d-flex justify-content-between small mb-1">
+                  <li key={item.id} className="d-flex justify-content-between">
                     <span>{item.name} × {item.quantity}</span>
-                    <span>${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
-                  </div>
+                    <span>{formatCurrency(parseFloat(item.price) * item.quantity)}</span>
+                  </li>
                 ))}
-              </div>
-              
+              </ul>
               <hr />
-              
-              <div className="d-flex justify-content-between mb-3">
-                <span>Subtotal:</span>
-                <span>${getCartTotal().toFixed(2)}</span>
-              </div>
-              
-              <div className="d-flex justify-content-between mb-3">
-                <span>Delivery Fee:</span>
-                <span>$3.99</span>
-              </div>
-              
-              <div className="d-flex justify-content-between mb-3">
-                <span>Tax (8.5%):</span>
-                <span>${(getCartTotal() * 0.085).toFixed(2)}</span>
-              </div>
-              
+              <div className="d-flex justify-content-between mb-2"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+              <div className="d-flex justify-content-between mb-2"><span>Delivery</span><span>{formatCurrency(deliveryFee)}</span></div>
+              <div className="d-flex justify-content-between mb-2"><span>Tax (8.5%)</span><span>{formatCurrency(tax)}</span></div>
               <hr />
-              
-              <div className="d-flex justify-content-between mb-4">
-                <strong>Total:</strong>
-                <strong className="text-success">
-                  ${(getCartTotal() + 3.99 + getCartTotal() * 0.085).toFixed(2)}
-                </strong>
-              </div>
-              
-              <button className="btn btn-success w-100 mb-2">
-                🚀 Proceed to Checkout
-              </button>
-              
-              <Link to="/restaurants" className="btn btn-outline-primary w-100">
-                🛍️ Continue Shopping
-              </Link>
+              <div className="d-flex justify-content-between mb-3 fw-bold"><span>Total</span><span className="text-success">{formatCurrency(total)}</span></div>
+              <button
+                className="btn btn-success w-100 mb-2"
+                onClick={() => navigate('/checkout')}
+                disabled={cart.length === 0}
+                aria-label="Proceed to checkout"
+                data-testid="cart-checkout-btn"
+              >Proceed to Checkout</button>
+              <Link to="/restaurants" className="btn btn-outline-primary w-100" data-testid="cart-continue-btn">Continue Shopping</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Simple checkout placeholder page
+const CheckoutPage = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="container py-5">
+      <div className="row justify-content-center">
+        <div className="col-md-6">
+          <div className="card shadow-sm">
+            <div className="card-body text-center p-4">
+              <h2 className="mb-3">Checkout</h2>
+              <p className="text-muted mb-4">Checkout flow coming soon.</p>
+              <button className="btn btn-primary me-2" onClick={() => navigate('/cart')}>Back to Cart</button>
+              <Link to="/restaurants" className="btn btn-outline-secondary">Continue Shopping</Link>
             </div>
           </div>
         </div>
@@ -2074,8 +2196,8 @@ const LoginPage = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/accounts/auth/login/`, {
-        username: formData.email, // Use email as username for login
+      const response = await axios.post(`${API_BASE_URL}/accounts/login/`, {
+        email: formData.email,
         password: formData.password
       });
       
@@ -2420,15 +2542,20 @@ const LoginPage = () => {
 
 // Floating cart button component
 const FloatingCartButton = () => {
-  const { getCartItemCount } = useApp();
+  // Use cart context after refactor
+  const { getCartItemCount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Don't show on cart page
-  if (location.pathname === '/cart') return null;
+  const cartCount = getCartItemCount();
+  // FloatingCartButton render trace removed
+  
+  // Don't show on cart-like routes
+  const hiddenOn = ['/cart', '/checkout', '/login', '/forgot-password'];
+  if (hiddenOn.includes(location.pathname)) return null;
   
   // Don't show if cart is empty
-  if (getCartItemCount() === 0) return null;
+  if (cartCount === 0) return null;
   
   return (
     <button
@@ -2454,35 +2581,104 @@ const FloatingCartButton = () => {
 };
 
 // Main App component with floating cart button
-function App() {
-  return (
-    <AppProvider>
-      <Router>
-        <div className="App min-vh-100 bg-light">
-          <Navbar />
-          <main>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/restaurants" element={<RestaurantsPage />} />
-              <Route path="/menu" element={<MenuPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            </Routes>
-          </main>
-          
-          {/* Floating Cart Button */}
-          <FloatingCartButton />
-          
-          {/* Footer */}
-          <footer className="bg-dark text-white text-center py-3 mt-5">
-            <div className="container">
-              <p>&copy; 2024 The Restaurant. Built with React & Django.</p>
-            </div>
-          </footer>
+class AppErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch() { /* error captured */ }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="container py-5">
+          <div className="alert alert-danger" role="alert">
+            <h4 className="alert-heading">Unexpected Error</h4>
+            <p>Something went wrong rendering the application.</p>
+            <button className="btn btn-primary" onClick={() => window.location.reload()}>Reload</button>
+          </div>
         </div>
-      </Router>
-    </AppProvider>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function App() {
+  const location = useLocation();
+  const mainRef = React.useRef(null);
+
+  // Update document title based on route
+  React.useEffect(() => {
+    const path = location.pathname;
+    const brand = 'The Restaurant';
+    let title = brand;
+    const last = decodeURIComponent(path.split('/').filter(Boolean).pop() || '');
+    if (path === '/') title = `Home • ${brand}`;
+    else if (path.startsWith('/restaurants/')) title = `Restaurant Details • ${brand}`;
+    else if (path === '/restaurants') title = `Restaurants • ${brand}`;
+    else if (path === '/menu') title = `Menu • ${brand}`;
+    else if (path.startsWith('/menu-items/')) title = `Menu Item • ${brand}`;
+    else if (path === '/cart') title = `Cart • ${brand}`;
+    else if (path === '/checkout') title = `Checkout • ${brand}`;
+    else if (path === '/login') title = `Login • ${brand}`;
+    else if (path === '/forgot-password') title = `Forgot Password • ${brand}`;
+    else if (path === '/cuisines') title = `Popular Cuisines • ${brand}`;
+    else if (path.startsWith('/cuisines/')) title = `${last} • Cuisines • ${brand}`;
+    document.title = title;
+  }, [location.pathname]);
+
+  // Move focus to main content on navigation for accessibility
+  React.useEffect(() => {
+    const el = mainRef.current;
+    if (el) {
+      setTimeout(() => {
+        try { el.focus(); } catch (_) {}
+      }, 0);
+    }
+  }, [location.pathname]);
+
+  return (
+    <AppErrorBoundary>
+      <AppProvider>
+        <CartProvider>
+          <div className="App min-vh-100 bg-light">
+            <a href="#main-content" className="skip-to-content">Skip to content</a>
+            <Navbar />
+            <main id="main-content" ref={mainRef} tabIndex="-1" role="main" aria-label="Main content">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/restaurants" element={<RestaurantsPage />} />
+                <Route path="/menu" element={<MenuPage />} />
+                <Route path="/restaurants/:slug" element={<RestaurantDetailPage />} />
+                <Route path="/menu-items/:slug" element={<MenuItemDetailPage />} />
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/cuisines" element={<PopularCuisinesPage />} />
+                <Route path="/cuisines/:name" element={<PopularCuisinesPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              </Routes>
+            </main>
+            <FloatingCartButton />
+            <footer className="bg-dark text-white text-center py-3 mt-5">
+              <div className="container">
+                <p>&copy; 2024 The Restaurant</p>
+                <p className="small">Powered by:   
+                  <a href="https://www.kdadesign.tech" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-gold text-decoration-none"
+                  >
+                    &nbsp; kda design technologies
+                  </a>
+                </p>
+              </div>
+            </footer>
+          </div>
+        </CartProvider>
+      </AppProvider>
+    </AppErrorBoundary>
   );
 }
 

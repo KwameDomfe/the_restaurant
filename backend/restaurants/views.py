@@ -12,6 +12,7 @@ from .serializers import (
 
 class RestaurantViewSet(viewsets.ModelViewSet):
     queryset = Restaurant.objects.filter(is_active=True)
+    lookup_field = 'slug'
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['cuisine_type', 'price_range']
@@ -76,6 +77,54 @@ class RestaurantViewSet(viewsets.ModelViewSet):
         serializer = MenuCategorySerializer(categories, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='popular-cuisines')
+    def popular_cuisines(self, request):
+        """Get popular cuisines based on restaurant count and ratings"""
+        from django.db.models import Count, Avg
+        
+        # Get cuisine types with restaurant count and average rating
+        cuisines = (
+            Restaurant.objects
+            .filter(is_active=True)
+            .values('cuisine_type')
+            .annotate(
+                restaurant_count=Count('id'),
+                avg_rating=Avg('rating')
+            )
+            .filter(restaurant_count__gt=0)
+            .order_by('-restaurant_count', '-avg_rating')
+        )
+        
+        # Format the response with emojis for popular cuisines
+        cuisine_emojis = {
+            'Italian': '🍝',
+            'Japanese': '🍣', 
+            'Mexican': '🌮',
+            'Indian': '🍛',
+            'Chinese': '🥢',
+            'American': '🍔',
+            'French': '🥐',
+            'Thai': '🍜',
+            'Mediterranean': '🫒',
+            'Korean': '🍲',
+            'Vietnamese': '🍲',
+            'Greek': '🥗',
+            'Spanish': '🥘',
+            'Turkish': '🥙',
+        }
+        
+        popular_cuisines = []
+        for cuisine_data in cuisines:
+            cuisine_type = cuisine_data['cuisine_type']
+            popular_cuisines.append({
+                'name': cuisine_type,
+                'emoji': cuisine_emojis.get(cuisine_type, '🍽️'),
+                'restaurant_count': cuisine_data['restaurant_count'],
+                'avg_rating': round(cuisine_data['avg_rating'] or 0, 1)
+            })
+        
+        return Response(popular_cuisines)
+
     @action(detail=True, methods=['get', 'post'])
     def reviews(self, request, pk=None):
         """Get or create restaurant reviews"""
@@ -113,12 +162,66 @@ class MenuItemViewSet(viewsets.ModelViewSet):
     queryset = MenuItem.objects.filter(is_available=True)
     serializer_class = MenuItemSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    lookup_field = 'slug'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = [
         'restaurant', 'category', 'is_vegetarian', 
         'is_vegan', 'is_gluten_free', 'spice_level'
     ]
     search_fields = ['name', 'description', 'ingredients']
+
+    @action(detail=False, methods=['get'], url_path='meal-periods')
+    def by_meal_period(self, request):
+        """Get menu items grouped by meal period"""
+        # Get distinct meal periods from categories that have items
+        categories = MenuCategory.objects.filter(
+            items__is_available=True
+        ).distinct().select_related('restaurant').prefetch_related('items')
+        
+        # Group items by meal period
+        meal_periods_data = {
+            'breakfast': [],
+            'brunch': [],
+            'lunch': [],
+            'supper': [],
+            'dinner': [],
+            'all_day': []
+        }
+        
+        for category in categories:
+            meal_period = category.meal_period
+            if meal_period in meal_periods_data:
+                items = category.items.filter(is_available=True)
+                serialized_items = MenuItemSerializer(
+                    items, 
+                    many=True, 
+                    context={'request': request}
+                ).data
+                meal_periods_data[meal_period].extend(serialized_items)
+        
+        # Format response with display names and emojis
+        response_data = []
+        meal_period_info = {
+            'breakfast': {'name': 'Breakfast', 'emoji': '🌅', 'time': '7:00 AM - 11:00 AM'},
+            'brunch': {'name': 'Brunch', 'emoji': '🥞', 'time': '10:00 AM - 2:00 PM'},
+            'lunch': {'name': 'Lunch', 'emoji': '🌤️', 'time': '11:30 AM - 3:00 PM'},
+            'supper': {'name': 'Supper', 'emoji': '🌆', 'time': '5:00 PM - 7:00 PM'},
+            'dinner': {'name': 'Dinner', 'emoji': '🌙', 'time': '6:00 PM - 10:00 PM'},
+            'all_day': {'name': 'All Day', 'emoji': '⭐', 'time': 'Available All Day'}
+        }
+        
+        for period_key, items in meal_periods_data.items():
+            if items:  # Only include periods with available items
+                info = meal_period_info[period_key]
+                response_data.append({
+                    'period': period_key,
+                    'name': info['name'],
+                    'emoji': info['emoji'],
+                    'time': info['time'],
+                    'items': items
+                })
+        
+        return Response(response_data)
 
     @action(detail=False, methods=['get'])
     def dietary_filters(self, request):
