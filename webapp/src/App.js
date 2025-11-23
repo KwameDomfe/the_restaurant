@@ -444,8 +444,9 @@ const RestaurantCard = ({ restaurant }) => {
         setLoadingMenu(false);
       }
       
-      // Removed global body scroll lock to keep page scroll functional
-      // If needed in future, implement conditional lock with restore on close
+      // Add body scroll lock
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('modal-open');
       
       setShowModal(true);
       setIsOpening(false);
@@ -463,7 +464,7 @@ const RestaurantCard = ({ restaurant }) => {
       e.stopPropagation();
     }
     
-    // Ensure any previous attempts to lock scroll are cleared (defensive)
+    // Restore body scroll
     document.body.style.overflow = '';
     document.body.classList.remove('modal-open');
     
@@ -730,7 +731,7 @@ const RestaurantCard = ({ restaurant }) => {
                     </div>
                   </div>
                 </div>
-                <div className="modal-body p-4" style={{ overflowY: 'auto', flex: '1 1 auto' }}>
+                <div className="modal-body p-4" style={{ overflowY: 'auto' }}>
                   {loadingMenu ? (
                     <div className="text-center py-5">
                       <div className="spinner-border text-primary" role="status" style={{ width: '4rem', height: '4rem' }}>
