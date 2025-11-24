@@ -2200,10 +2200,12 @@ const LoginPage = () => {
 
     setLoading(true);
     try {
+      const token = localStorage.getItem('authToken');
       const response = await axios.post(`${API_BASE_URL}/accounts/login/`, {
         email: formData.email,
         password: formData.password
-      });
+      },
+      token ? { headers: { Authorization: `Bearer ${token}` } } : {});
       
       // Store token
       localStorage.setItem('authToken', response.data.token);
@@ -2242,6 +2244,7 @@ const LoginPage = () => {
 
     setLoading(true);
     try {
+      const token = localStorage.getItem('authToken');
       const response = await axios.post(`${API_BASE_URL}/accounts/auth/register/`, {
         username: formData.username,
         email: formData.email,
@@ -2251,7 +2254,8 @@ const LoginPage = () => {
         user_type: formData.userType,
         password: formData.password,
         password_confirm: formData.passwordConfirm
-      });
+      },
+      token ? { headers: { Authorization: `Bearer ${token}` } } : {});
       
       // Store token
       localStorage.setItem('authToken', response.data.token);
