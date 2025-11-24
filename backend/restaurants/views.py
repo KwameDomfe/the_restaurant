@@ -159,7 +159,7 @@ class MenuCategoryViewSet(viewsets.ModelViewSet):
     filterset_fields = ['restaurant']
 
 class MenuItemViewSet(viewsets.ModelViewSet):
-    queryset = MenuItem.objects.filter(is_available=True)
+    queryset = MenuItem.objects.filter(is_available=True).order_by('id')
     serializer_class = MenuItemSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     lookup_field = 'slug'
