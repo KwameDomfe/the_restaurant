@@ -26,7 +26,7 @@ export const CartProvider = ({ children }) => {
     setShowCartPreview(true);
     setTimeout(() => setShowCartPreview(false), 3000);
     setAddingToCart(null);
-    console.log('[CartContext] item added id=', item.id, 'newCount=', getCartItemCount() + quantityToAdd);
+    // console.log('[CartContext] item added id=', item.id, 'newCount=', getCartItemCount() + quantityToAdd);
   };
 
   const addItemToCart = (item, quantity = 1) => {

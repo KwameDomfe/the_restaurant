@@ -9,13 +9,13 @@ import './App.css';
 import {
   RestaurantCardSkeleton,
   HeroSkeleton,
-  MenuItemSkeleton,
+  // MenuItemSkeleton,
   SearchFilterSkeleton,
-  MenuModalSkeleton,
-  CartItemSkeleton,
-  OrderCardSkeleton,
-  ProfileSkeleton,
-  FullPageSkeleton
+  // MenuModalSkeleton,
+  // CartItemSkeleton,
+  // OrderCardSkeleton,
+  // ProfileSkeleton,
+  // FullPageSkeleton
 } from './components/SkeletonLoader';
 
 // NOTE: Reconstructed file header after accidental CartPage injection.
@@ -409,7 +409,10 @@ const CartProgressIndicator = ({ closeMenuModal }) => {
 // Restaurant Card component
 const RestaurantCard = ({ restaurant }) => {
   const { menuItems } = useApp();
-  const { addingToCart, addItemToCart, updateItemQuantity, getItemQuantity, getCartItemCount } = useCart();
+  const { addingToCart, addItemToCart, updateItemQuantity, getItemQuantity, 
+    // getCartItemCount 
+
+  } = useCart();
   
   // RestaurantCard render trace removed
   const navigate = useNavigate();
