@@ -47,7 +47,7 @@ export const AppProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const API_BASE_URL = 'http://localhost:8000/api';
+  const API_BASE_URL = 'https://whale-app-ro8kj.ondigitalocean.app/api';
 
   const showToast = (message, type = 'info', duration = 3000) => {
     setToast({ message, type });
