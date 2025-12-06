@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django import forms
-from django.utils.html import format_html
+from django.utils.html import format_html, escape
 from django.utils.safestring import mark_safe
+import textwrap
 from django.core.files.storage import default_storage
 from django.conf import settings
 from uuid import uuid4
@@ -9,9 +10,18 @@ import os
 import re
 from .models import Restaurant, MenuCategory, MenuItem, RestaurantReview
 
+
 # Custom widget to support multiple file uploads in Django admin forms
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
+
+# Move MenuCategoryInlineForm here, after imports
+class MenuCategoryInlineForm(forms.ModelForm):
+    name = forms.CharField(widget=forms.TextInput(attrs={'maxlength': 100, 'placeholder': 'Category name'}))
+
+    class Meta:
+        model = MenuCategory
+        fields = '__all__'
 
 class RestaurantReviewAdminForm(forms.ModelForm):
     """Custom form for RestaurantReview to handle image uploads."""
@@ -23,170 +33,308 @@ class RestaurantReviewAdminForm(forms.ModelForm):
         help_text="Upload one or more images for the review."
     )
 
-    replace_images = forms.BooleanField(
-        required=False,
-        initial=False,
-        help_text="If checked, uploaded files will replace existing images. If unchecked, they will be appended."
-    )
+# Module-level widget used by MenuItem forms/admin
+class IngredientsTableWidget(forms.Widget):
+    def render(self, name, value, attrs=None, renderer=None):
+                import json
+                items = []
+                if isinstance(value, str):
+                        try:
+                                value = json.loads(value)
+                        except Exception:
+                                value = []
+                if isinstance(value, list):
+                        for ing in value:
+                                if isinstance(ing, dict):
+                                        items.append({
+                                                'name': ing.get('name',''),
+                                                'quantity': '' if ing.get('quantity') is None else str(ing.get('quantity')),
+                                                'unit': ing.get('unit',''),
+                                                'notes': ing.get('notes',''),
+                                        })
 
-    class Meta:
-        model = RestaurantReview
-        fields = '__all__'
-        widgets = {
-            'comment': forms.Textarea(attrs={'rows': 4}),
+                container_id = (attrs.get('id') if attrs else f'id_{name}') + '_stack'
+                hidden_id = (attrs.get('id') if attrs else f'id_{name}') + '_hidden'
+                # Common unit options for convenience
+                unit_options = [
+                    '', 'g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'pcs'
+                ]
+
+                def unit_select_html(selected):
+                    opts = []
+                    for u in unit_options:
+                        sel = ' selected' if u == (selected or '') else ''
+                        label = (u or '—')
+                        opts.append(f"<option value='{u}'{sel}>{label}</option>")
+                    return "<select class='vTextField unit-select'>" + ''.join(opts) + "</select>"
+
+                blocks_html = ''
+                for ing in items:
+                        blocks_html += (
+                                "<div class='ingredient-block' style='border:1px solid #ddd;padding:10px;margin-bottom:8px;border-radius:6px;'>"
+                        f"<div><label>Name</label><input type='text' class='vTextField' placeholder='Name' value='{escape(ing['name'])}' /></div>"
+                    f"<div style='margin-top:6px;display:flex;gap:8px;align-items:center;'><label>Quantity</label><input type='number' class='vNumberField' placeholder='Quantity' min='0' step='any' value='{escape(ing['quantity'])}' /><label>Unit</label>" + unit_select_html(ing['unit']) + "</div>"
+                        f"<div style='margin-top:6px;'><label>Notes</label><input type='text' class='vTextField' placeholder='Notes' value='{escape(ing['notes'])}' /></div>"
+                                "<div style='margin-top:8px;'><button type='button' class='button delete-row'>Remove</button></div>"
+                                "</div>"
+                        )
+                if not blocks_html:
+                        blocks_html = (
+                                "<div class='ingredient-block' style='border:1px solid #ddd;padding:10px;margin-bottom:8px;border-radius:6px;'>"
+                                "<div><label>Name</label><input type='text' class='vTextField' placeholder='Name' /></div>"
+                        "<div style='margin-top:6px;display:flex;gap:8px;align-items:center;'><label>Quantity</label><input type='number' class='vNumberField' placeholder='Quantity' min='0' step='any' /><label>Unit</label><select class='vTextField unit-select'><option value=''>—</option><option value='g'>g</option><option value='kg'>kg</option><option value='ml'>ml</option><option value='l'>l</option><option value='tsp'>tsp</option><option value='tbsp'>tbsp</option><option value='cup'>cup</option><option value='pcs'>pcs</option></select></div>"
+                                "<div style='margin-top:6px;'><label>Notes</label><input type='text' class='vTextField' placeholder='Notes' /></div>"
+                                "<div style='margin-top:8px;'><button type='button' class='button delete-row'>Remove</button></div>"
+                                "</div>"
+                        )
+
+                html = """
+<div class='ingredients-stack-widget' id='widget_{container_id}'>
+    <div id='{container_id}' class='ingredients-container'>
+        {blocks_html}
+    </div>
+    <div style='margin-top:6px;display:flex;gap:8px;'>
+        <button type='button' class='button add-row' data-widget='widget_{container_id}'>Add Ingredient</button>
+        <button type='button' class='button paste-helper' data-widget='widget_{container_id}'>Paste List</button>
+    </div>
+    <input type='hidden' name='{name}' id='{hidden_id}' />
+</div>
+<script>
+(function(){
+    var widgetId = 'widget_{container_id}';
+    var widget = document.getElementById(widgetId);
+    if(!widget) return;
+    
+    var container = document.getElementById('{container_id}');
+    var hidden = document.getElementById('{hidden_id}');
+    if(!container || !hidden) return;
+    
+    function serialize(){
+        var blocks = container.querySelectorAll('.ingredient-block');
+        var data = [];
+        blocks.forEach(function(block){
+            var nameEl = block.querySelector('div:nth-child(1) input');
+            var qtyEl = block.querySelector('div:nth-child(2) input[type="number"]');
+            var unitEl = block.querySelector('div:nth-child(2) .unit-select');
+            var notesEl = block.querySelector('div:nth-child(3) input');
+            var name = (nameEl && nameEl.value || '').trim();
+            var qty = (qtyEl && qtyEl.value || '').trim();
+            var unit = (unitEl && unitEl.value || '').trim();
+            var notes = (notesEl && notesEl.value || '').trim();
+            if(name){
+                var obj = {name: name};
+                if(qty){
+                    var num = Number(qty);
+                    obj.quantity = isNaN(num) ? qty : num;
+                }
+                if(unit) obj.unit = unit;
+                if(notes) obj.notes = notes;
+                data.push(obj);
+            }
+        });
+        hidden.value = JSON.stringify(data);
+    }
+    
+    function createBlock(){
+        var div = document.createElement('div');
+        div.className = 'ingredient-block';
+        div.style.cssText = 'border:1px solid #ddd;padding:10px;margin-bottom:8px;border-radius:6px;';
+        div.innerHTML = '<div><label>Name</label><input type="text" class="vTextField" placeholder="Name" /></div>' +
+            '<div style="margin-top:6px;display:flex;gap:8px;align-items:center;"><label>Quantity</label><input type="number" class="vNumberField" placeholder="Quantity" min="0" step="any" /><label>Unit</label><select class="vTextField unit-select"><option value="">—</option><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">l</option><option value="tsp">tsp</option><option value="tbsp">tbsp</option><option value="cup">cup</option><option value="pcs">pcs</option></select></div>' +
+            '<div style="margin-top:6px;"><label>Notes</label><input type="text" class="vTextField" placeholder="Notes" /></div>' +
+            '<div style="margin-top:8px;"><button type="button" class="button delete-row" data-widget="' + widgetId + '">Remove</button></div>';
+        return div;
+    }
+    
+    function addRow(){
+        var block = createBlock();
+        container.appendChild(block);
+        attachBlockListeners(block);
+        serialize();
+    }
+    
+    function attachBlockListeners(block){
+        var inputs = block.querySelectorAll('input, select');
+        inputs.forEach(function(inp){
+            inp.addEventListener('input', serialize);
+            inp.addEventListener('change', serialize);
+        });
+    }
+    
+    // Attach to existing blocks
+    container.querySelectorAll('.ingredient-block').forEach(attachBlockListeners);
+    
+    // Event delegation on widget
+    widget.addEventListener('click', function(e){
+        var target = e.target;
+        
+        // Check if this event belongs to this widget instance
+        if(target.dataset.widget !== widgetId && 
+           (!target.closest('[data-widget]') || target.closest('[data-widget]').dataset.widget !== widgetId)){
+            return;
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Hide the raw JSON field only if it exists on this form
-        if 'images' in self.fields:
-            self.fields['images'].widget = forms.HiddenInput()
-
-    def clean_image_uploads(self):
-        """Return a list of uploaded files without invoking FileField's default single-file validation."""
-        files = self.files.getlist('image_uploads')
-        if not files:
-            return []
-
-        allowed_ext = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
-        max_size = 10 * 1024 * 1024  # 10MB per file
-
-        for f in files:
-            ext = os.path.splitext(f.name)[1].lower()
-            if ext not in allowed_ext:
-                raise forms.ValidationError(f"Unsupported file type for '{f.name}'. Allowed: {', '.join(sorted(allowed_ext))}.")
-            if getattr(f, 'size', 0) > max_size:
-                raise forms.ValidationError(f"'{f.name}' exceeds the 10MB size limit.")
-
-        return files
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
         
-        # Handle uploaded files: save to storage and store URLs in JSON
-        uploaded_files = self.cleaned_data.get('image_uploads') or []
-        # Either replace existing images or append to them
-        image_urls = [] if self.cleaned_data.get('replace_images') else list(instance.images or [])
-
-        for f in uploaded_files:
-            base, ext = os.path.splitext(f.name)
-            filename = f"{uuid4().hex}{ext}"
-            storage_path = default_storage.save(os.path.join('reviews', filename), f)
-            # Try to get absolute URL from storage; fallback to MEDIA_URL
-            try:
-                url = default_storage.url(storage_path)
-            except Exception:
-                url = (settings.MEDIA_URL.rstrip('/') + '/' + storage_path.replace('\\', '/').lstrip('/'))
-            image_urls.append(url)
-
-        instance.images = image_urls
+        // Handle delete
+        if(target.classList.contains('delete-row')){
+            e.preventDefault();
+            var block = target.closest('.ingredient-block');
+            if(block && container.contains(block)){
+                block.remove();
+                serialize();
+            }
+            return;
+        }
         
-        if commit:
-            instance.save()
-        return instance
-
-class AllergenWidget(forms.CheckboxSelectMultiple):
-    """Custom widget for allergen selection"""
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.choices = [
-            ('dairy', 'Dairy'),
-            ('eggs', 'Eggs'), 
-            ('fish', 'Fish'),
-            ('shellfish', 'Shellfish'),
-            ('tree_nuts', 'Tree Nuts'),
-            ('peanuts', 'Peanuts'),
-            ('wheat', 'Wheat'),
-            ('soy', 'Soy'),
-            ('sesame', 'Sesame'),
-            ('sulphites', 'Sulphites'),
-            ('mustard', 'Mustard'),
-            ('celery', 'Celery'),
-            ('lupin', 'Lupin'),
-            ('molluscs', 'Molluscs'),
-        ]
-
+        // Handle add
+        if(target.classList.contains('add-row')){
+            e.preventDefault();
+            addRow();
+            return;
+        }
+        
+        // Handle paste
+        if(target.classList.contains('paste-helper')){
+            e.preventDefault();
+            var text = window.prompt('Paste ingredients (one per line). Format: name | qty unit | notes');
+            if(text){
+                var lines = text.split(/\\r?\\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+                lines.forEach(function(line){
+                    var parts = line.split('|').map(function(s){ return s.trim(); });
+                    var name = parts[0] || '';
+                    var qty = '';
+                    var unit = '';
+                    var notes = parts[2] || '';
+                    if(parts[1]){
+                        var m = parts[1].split(/\\s+/);
+                        qty = m[0] || '';
+                        unit = m[1] || '';
+                    }
+                    var block = createBlock();
+                    var nameEl = block.querySelector('div:nth-child(1) input');
+                    var qtyEl = block.querySelector('div:nth-child(2) input[type="number"]');
+                    var unitEl = block.querySelector('div:nth-child(2) .unit-select');
+                    var notesEl = block.querySelector('div:nth-child(3) input');
+                    if(nameEl) nameEl.value = name;
+                    if(qtyEl) qtyEl.value = qty;
+                    if(unitEl && unit) unitEl.value = unit;
+                    if(notesEl) notesEl.value = notes;
+                    container.appendChild(block);
+                    attachBlockListeners(block);
+                });
+                serialize();
+            }
+        }
+    });
+    
+    serialize();
+})();
+</script>
+"""
+                html = html.replace('{container_id}', container_id).replace('{hidden_id}', hidden_id).replace('{blocks_html}', blocks_html).replace('{name}', name)
+                return mark_safe(html)
 class MenuItemAdminForm(forms.ModelForm):
-    """Custom form for MenuItem with improved allergen and nutritional info fields"""
-    
-    allergens = forms.MultipleChoiceField(
-        choices=[
-            ('dairy', '🥛 Dairy'),
-            ('eggs', '🥚 Eggs'), 
-            ('fish', '🐟 Fish'),
-            ('shellfish', '🦐 Shellfish'),
-            ('tree_nuts', '🌰 Tree Nuts'),
-            ('peanuts', '🥜 Peanuts'),
-            ('wheat', '🌾 Wheat'),
-            ('soy', '🫘 Soy'),
-            ('sesame', '🌱 Sesame'),
-            ('sulphites', '⚡ Sulphites'),
-            ('mustard', '🌭 Mustard'),
-            ('celery', '🥬 Celery'),
-            ('lupin', '🌿 Lupin'),
-            ('molluscs', '🐚 Molluscs'),
-        ],
-        widget=forms.CheckboxSelectMultiple,
-        required=False,
-        help_text="Select all allergens present in this item"
-    )
-    
-    ingredients = forms.CharField(
-        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Enter ingredients separated by commas (e.g., tomatoes, basil, mozzarella)'}),
-        required=False,
-        help_text="List all ingredients separated by commas"
-    )
-    
-    # Individual nutrition fields instead of complex widget
-    calories = forms.FloatField(required=False, min_value=0, help_text="Calories per serving (kcal)")
-    protein = forms.FloatField(required=False, min_value=0, help_text="Protein content (g)")
-    carbohydrates = forms.FloatField(required=False, min_value=0, help_text="Carbohydrates (g)")
-    fat = forms.FloatField(required=False, min_value=0, help_text="Total fat content (g)")
-    fiber = forms.FloatField(required=False, min_value=0, help_text="Fiber content (g)")
-    sodium = forms.FloatField(required=False, min_value=0, help_text="Sodium content (mg)")
-    sugar = forms.FloatField(required=False, min_value=0, help_text="Sugar content (g)")
-    
     class Meta:
         model = MenuItem
-        exclude = ['nutritional_info']  # Exclude the JSONField since we handle it with individual fields
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 4}),
-        }
-    
+        fields = '__all__'
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # Convert JSON allergens to form field format
-        if self.instance and self.instance.pk:
-            if self.instance.allergens:
-                self.fields['allergens'].initial = self.instance.allergens
-            
-            # Convert ingredients from JSON list to comma-separated string
-            if self.instance.ingredients:
-                self.fields['ingredients'].initial = ', '.join(self.instance.ingredients)
-            
-            # Extract nutritional info to individual fields
-            if self.instance.nutritional_info:
-                nutrition = self.instance.nutritional_info
-                self.fields['calories'].initial = nutrition.get('calories')
-                self.fields['protein'].initial = nutrition.get('protein')
-                self.fields['carbohydrates'].initial = nutrition.get('carbohydrates')
-                self.fields['fat'].initial = nutrition.get('fat')
-                self.fields['fiber'].initial = nutrition.get('fiber')
-                self.fields['sodium'].initial = nutrition.get('sodium')
-                self.fields['sugar'].initial = nutrition.get('sugar')
+        if 'ingredients' in self.fields:
+            self.fields['ingredients'].widget = IngredientsTableWidget()
     
-    def clean_allergens(self):
-        """Convert allergens back to JSON format"""
-        allergens = self.cleaned_data.get('allergens', [])
-        return allergens
-        
-    def clean_ingredients(self):
-        """Convert comma-separated string back to a list of strings"""
-        ingredients_str = self.cleaned_data.get('ingredients', '')
-        if not ingredients_str:
-            return []
-        return [item.strip() for item in ingredients_str.split(',') if item.strip()]
+
+from django_json_widget.widgets import JSONEditorWidget
+class RestaurantAdminForm(forms.ModelForm):
+    FEATURES_CHOICES = [
+        ('wifi', 'Wi‑Fi'),
+        ('parking', 'Parking'),
+        ('delivery', 'Delivery'),
+        ('takeout', 'Takeout'),
+        ('outdoor_seating', 'Outdoor seating'),
+        ('reservations', 'Reservations'),
+        ('family_friendly', 'Family friendly'),
+        ('halal', 'Halal options'),
+        ('vegan_options', 'Vegan options'),
+        ('live_music', 'Live music'),
+    ]
+
+    features = forms.MultipleChoiceField(
+        choices=FEATURES_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Select all features available at this restaurant"
+    )
+
+    # Per-day opening hours fields for end-user friendly input
+    MON_closed = forms.BooleanField(required=False, label='Closed')
+    MON_open = forms.TimeField(required=False, label='Open')
+    MON_close = forms.TimeField(required=False, label='Close')
+    TUE_closed = forms.BooleanField(required=False, label='Closed')
+    TUE_open = forms.TimeField(required=False, label='Open')
+    TUE_close = forms.TimeField(required=False, label='Close')
+    WED_closed = forms.BooleanField(required=False, label='Closed')
+    WED_open = forms.TimeField(required=False, label='Open')
+    WED_close = forms.TimeField(required=False, label='Close')
+    THU_closed = forms.BooleanField(required=False, label='Closed')
+    THU_open = forms.TimeField(required=False, label='Open')
+    THU_close = forms.TimeField(required=False, label='Close')
+    FRI_closed = forms.BooleanField(required=False, label='Closed')
+    FRI_open = forms.TimeField(required=False, label='Open')
+    FRI_close = forms.TimeField(required=False, label='Close')
+    SAT_closed = forms.BooleanField(required=False, label='Closed')
+    SAT_open = forms.TimeField(required=False, label='Open')
+    SAT_close = forms.TimeField(required=False, label='Close')
+    SUN_closed = forms.BooleanField(required=False, label='Closed')
+    SUN_open = forms.TimeField(required=False, label='Open')
+    SUN_close = forms.TimeField(required=False, label='Close')
+
+    class Meta:
+        model = Restaurant
+        fields = '__all__'
+        widgets = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize features checkboxes from JSON list
+        if self.instance and isinstance(self.instance.features, list):
+            self.fields['features'].initial = self.instance.features
+        # Initialize opening hours per-day fields from JSON
+        days = ['MON','TUE','WED','THU','FRI','SAT','SUN']
+        src = self.instance.opening_hours or {}
+        for d in days:
+            day = d.lower()
+            day_data = src.get(day, {}) if isinstance(src, dict) else {}
+            self.fields[f'{d}_closed'].initial = bool(day_data.get('closed'))
+            self.fields[f'{d}_open'].initial = day_data.get('open') or None
+            self.fields[f'{d}_close'].initial = day_data.get('close') or None
+
+    def clean_features(self):
+        # Return as list for JSONField storage
+        return self.cleaned_data.get('features', [])
+
+    def clean(self):
+        cleaned = super().clean()
+        # Build opening_hours JSON from per-day fields
+        result = {}
+        days = [
+            ('mon','MON'),('tue','TUE'),('wed','WED'),('thu','THU'),('fri','FRI'),('sat','SAT'),('sun','SUN')
+        ]
+        for key, D in days:
+            closed = cleaned.get(f'{D}_closed') or False
+            open_t = cleaned.get(f'{D}_open')
+            close_t = cleaned.get(f'{D}_close')
+            if closed:
+                result[key] = {'closed': True}
+            else:
+                if open_t and close_t:
+                    result[key] = {
+                        'closed': False,
+                        'open': open_t.strftime('%H:%M'),
+                        'close': close_t.strftime('%H:%M')
+                    }
+                else:
+                    result[key] = {'closed': False}
+        cleaned['opening_hours'] = result
+        return cleaned
 
     def save(self, commit=True):
         """Override save to handle custom fields"""
@@ -211,24 +359,76 @@ class MenuItemAdminForm(forms.ModelForm):
             instance.save()
         return instance
 
-class MenuCategoryInline(admin.TabularInline):
-    """Inline editor for Menu Categories within a Restaurant"""
+
+class MenuCategoryInline(admin.StackedInline):
+    """Improved inline editor for Menu Categories within a Restaurant"""
     model = MenuCategory
+    form = MenuCategoryInlineForm
     extra = 1
     ordering = ['display_order']
-    fields = ['name', 'description', 'meal_period', 'display_order']
 
-class MenuItemInline(admin.TabularInline):
-    """Inline editor for Menu Items within a Restaurant"""
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'image_preview', 'image')
+        }),
+        ('Details', {
+            'fields': ('description', 'meal_period', 'display_order'),
+        }),
+    )
+    readonly_fields = ['image_preview']
+
+    def image_preview(self, obj):
+        if obj and obj.image:
+            return mark_safe(f'<img src="{obj.image.url}" style="max-height:60px; max-width:120px; border:1px solid #ddd; margin:2px;" />')
+        return "No image"
+    image_preview.short_description = "Image Preview"
+
+
+class MenuItemInline(admin.StackedInline):
+    """Stacked inline editor for Menu Items within a Restaurant"""
     model = MenuItem
     form = MenuItemAdminForm
     extra = 1
     ordering = ['category', 'name']
-    fields = ['name', 'category', 'price', 'is_available']
-    readonly_fields = ['slug']
+    readonly_fields = ['slug', 'ingredients_table']
+
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'category', 'price', 'is_available', 'image')
+        }),
+        ('Ingredients', {
+            'fields': ('ingredients_table', 'ingredients'),
+            'description': 'Preview shows parsed ingredients. In the editor: add with the "Ingredient" template, ensure each item has a name; prefer numeric quantities with a unit.'
+        }),
+        ('Dietary', {
+            'classes': ('collapse',),
+            'fields': ('is_vegetarian', 'is_vegan', 'is_gluten_free', 'spice_level', 'allergens')
+        }),
+        ('Operational', {
+            'classes': ('collapse',),
+            'fields': ('prep_time',)
+        }),
+    )
+
+    def ingredients_table(self, obj):
+        if obj.ingredients:
+            html = '<table style="font-size:0.95em;">'
+            html += '<tr><th>Name</th><th>Quantity</th><th>Unit</th><th>Notes</th></tr>'
+            for ing in obj.ingredients:
+                html += f"<tr><td>{ing.get('name','')}</td><td>{ing.get('quantity','')}</td><td>{ing.get('unit','')}</td><td>{ing.get('notes','')}</td></tr>"
+            html += '</table>'
+            return mark_safe(html)
+        return ""
+    ingredients_table.short_description = 'Ingredients'
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name == 'ingredients':
+            kwargs['widget'] = IngredientsTableWidget()
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
+    form = RestaurantAdminForm
     """Admin configuration for the Restaurant model"""
     list_display = ('name', 'cuisine_type', 'rating', 'price_range', 'is_active', 'created_at')
     list_filter = ('cuisine_type', 'price_range', 'is_active')
@@ -260,10 +460,39 @@ class MenuCategoryAdmin(admin.ModelAdmin):
 class MenuItemAdmin(admin.ModelAdmin):
     """Admin configuration for MenuItem"""
     form = MenuItemAdminForm
-    list_display = ('name', 'restaurant', 'category', 'price', 'is_available', 'spice_level')
+    list_display = ('name', 'restaurant', 'category', 'price', 'is_available', 'spice_level', 'ingredients_table')
     list_filter = ('restaurant', 'category', 'is_available', 'is_vegetarian', 'is_vegan', 'is_gluten_free')
     search_fields = ('name', 'description', 'restaurant__name')
     ordering = ('restaurant', 'category', 'name')
+    readonly_fields = ['ingredients_table']
+    fieldsets = (
+        (None, {
+            'fields': ('restaurant', 'category', 'name', 'description', 'price', 'image', 'is_available', 'ingredients_table', 'ingredients', 'allergens', 'nutritional_info', 'prep_time', 'spice_level')
+        }),
+    )
+
+    def ingredients_table(self, obj):
+        import json
+        ingredients = obj.ingredients
+        if ingredients is None:
+            ingredients = []
+        if isinstance(ingredients, str):
+            try:
+                ingredients = json.loads(ingredients)
+            except Exception:
+                return ingredients  # fallback: show raw string
+        if isinstance(ingredients, list):
+            html = '<table style="font-size:0.95em;">'
+            html += '<tr><th>Name</th><th>Quantity</th><th>Unit</th><th>Notes</th></tr>'
+            for ing in ingredients:
+                if isinstance(ing, dict):
+                    html += f"<tr><td>{ing.get('name','')}</td><td>{ing.get('quantity','')}</td><td>{ing.get('unit','')}</td><td>{ing.get('notes','')}</td></tr>"
+                else:
+                    html += f"<tr><td colspan='4'>{str(ing)}</td></tr>"
+            html += '</table>'
+            return mark_safe(html)
+        return ""
+    ingredients_table.short_description = 'Ingredients'
     readonly_fields = ('slug',)
     
     fieldsets = (
@@ -274,15 +503,16 @@ class MenuItemAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
             'fields': ('is_available', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'spice_level', 'allergens')
         }),
-        ('Nutritional Information', {
-            'classes': ('collapse',),
-            'fields': ('calories', 'protein', 'carbohydrates', 'fat', 'fiber', 'sodium', 'sugar')
-        }),
         ('Operational', {
             'classes': ('collapse',),
             'fields': ('ingredients', 'prep_time')
         }),
     )
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name == 'ingredients':
+            kwargs['widget'] = IngredientsTableWidget()
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
 
 @admin.register(RestaurantReview)
 class RestaurantReviewAdmin(admin.ModelAdmin):

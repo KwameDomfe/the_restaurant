@@ -20,7 +20,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -30,19 +29,24 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config(
+  'ALLOWED_HOSTS', 
+  cast=lambda v: [s.strip() for s in v.split(',')]
+)
 
 
 # Application definition
 
-INSTALLED_APPS = [
+DEFAULT_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Third-party apps
+]
+
+THIRD_PARTY_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'django_filters',
@@ -51,12 +55,17 @@ INSTALLED_APPS = [
     'channels',
     'drf_spectacular',
     'drf_spectacular_sidecar',
-    # Local apps
+    'django_json_widget',
+]
+
+LOCAL_APPS = [
     'accounts',
     'restaurants',
     'orders',
     'social',
 ]
+
+INSTALLED_APPS = DEFAULT_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -93,9 +102,20 @@ WSGI_APPLICATION = 'therestaurant.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.parse(config('DATABASE_URL'), conn_max_age=600)
-}
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            config('DATABASE_URL'),
+            conn_max_age=600
+        )
+    }
 
 
 # Password validation
@@ -149,6 +169,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [

@@ -9,6 +9,7 @@ const Inner = () => {
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     let mounted = true;
@@ -63,6 +64,11 @@ const Inner = () => {
     }
   };
 
+  const handleAddToCart = () => {
+    showToast(`Added ${quantity} ${item.name} to cart`, 'success');
+    // TODO: Integrate with cart context
+  };
+
   return (
     <div className="container py-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -77,6 +83,42 @@ const Inner = () => {
           <h3 className="card-title">{item.name}</h3>
           <p className="text-muted">GHC {parseFloat(item.price).toFixed(2)}</p>
           {item.description ? (<p>{item.description}</p>) : null}
+          <div className="row g-2 mb-2">
+            <div className="col-5">
+              <label className="form-label small">Quantity</label>
+              <div className="input-group input-group-sm">
+                <button
+                  className="btn btn-outline-secondary"
+                  disabled={quantity <= 1}
+                  onClick={() => setQuantity(quantity - 1)}
+                >−</button>
+                <input
+                  type="number"
+                  className="form-control text-center"
+                  min="1"
+                  max="99"
+                  value={quantity}
+                  onChange={e => setQuantity(Math.max(1, Number(e.target.value)))}
+                />
+                <button
+                  className="btn btn-outline-secondary"
+                  onClick={() => setQuantity(quantity + 1)}
+                >+</button>
+              </div>
+            </div>
+            <div className="col-7">
+              <label className="form-label small">Total</label>
+              <div className="fw-bold text-success fs-6">
+                GHC {(parseFloat(item.price) * quantity).toFixed(2)}
+              </div>
+            </div>
+          </div>
+          <button
+            className="btn w-100 btn-primary"
+            onClick={handleAddToCart}
+          >
+            🛒 Add {quantity} to Cart
+          </button>
         </div>
       </div>
     </div>

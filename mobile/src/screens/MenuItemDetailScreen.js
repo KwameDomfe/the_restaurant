@@ -24,10 +24,12 @@ const MenuItemDetailScreen = ({ route, navigation }) => {
   const missingItemToastShown = React.useRef(false);
   if (!item && !missingItemToastShown.current) {
     missingItemToastShown.current = true;
-    showSnackbar('Menu item not found', {
-      label: 'Back',
-      onPress: () => navigation.goBack()
-    });
+    showSnackbar('Menu item not found', 
+      {
+        label: 'Back',
+        onPress: () => navigation.goBack()
+      }
+    );
   }
 
   if (!item) {

@@ -7,7 +7,7 @@ from .models import Restaurant, MenuCategory, MenuItem, RestaurantReview
 from .serializers import (
     RestaurantListSerializer, RestaurantDetailSerializer,
     MenuCategorySerializer, MenuItemSerializer, RestaurantReviewSerializer,
-    RestaurantSearchSerializer
+    RestaurantSearchSerializer, RestaurantCreateSerializer
 )
 
 class RestaurantViewSet(viewsets.ModelViewSet):
@@ -23,6 +23,8 @@ class RestaurantViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return RestaurantListSerializer
+        elif self.action == 'create':
+            return RestaurantCreateSerializer
         return RestaurantDetailSerializer
 
     @action(detail=False, methods=['post'])

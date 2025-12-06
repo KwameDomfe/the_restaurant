@@ -60,6 +60,7 @@ class MenuCategory(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='categories')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
+    image = models.ImageField(upload_to='menu_categories/', blank=True)
     meal_period = models.CharField(max_length=20, choices=MEAL_PERIOD_CHOICES, default='all_day')
     display_order = models.IntegerField(default=0)
 
@@ -78,7 +79,8 @@ class MenuItem(models.Model):
     description = models.TextField()
     price = models.DecimalField(max_digits=8, decimal_places=2)
     image = models.ImageField(upload_to='menu_items/', blank=True)
-    ingredients = models.JSONField(default=list)
+    # ingredients: list of objects {name, quantity, unit, notes}
+    ingredients = models.JSONField(default=list, help_text="List of ingredients as objects: [{name, quantity, unit, notes}]")
     allergens = models.JSONField(default=list)
     nutritional_info = models.JSONField(default=dict)
     is_available = models.BooleanField(default=True)
@@ -86,7 +88,7 @@ class MenuItem(models.Model):
     is_vegan = models.BooleanField(default=False)
     is_gluten_free = models.BooleanField(default=False)
     spice_level = models.IntegerField(default=0, choices=[(i, i) for i in range(6)])
-    prep_time = models.IntegerField(help_text="Preparation time in minutes")
+    prep_time = models.IntegerField(help_text="Preparation time in minutes", null=True, blank=True, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

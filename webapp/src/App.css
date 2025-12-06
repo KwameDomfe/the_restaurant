@@ -1,3 +1,19 @@
+@media (max-width: 576px) {
+  #mainNavbar .navbar-nav {
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100%;
+  }
+  #mainNavbar .nav-item {
+    margin: 1rem 0 !important;
+  }
+  #mainNavbar .btn {
+    width: 80vw !important;
+    max-width: 320px !important;
+    margin: 2rem auto 0 auto !important;
+    font-size: 1.2rem !important;
+  }
+}
 .App {
   text-align: center;
 }
@@ -691,10 +707,11 @@ body.modal-open {
 }
 
 /* Enhanced mobile navigation */
-@media (max-width: 991px) {
+@media (max-width: 768px) {
   .navbar-collapse {
     background-color: rgba(33, 37, 41, 0.95);
     border-radius: 0.5rem;
+    min-height: 90vh;
     margin-top: 0.5rem;
     padding: 1rem;
   }

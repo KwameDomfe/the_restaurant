@@ -1,6 +1,18 @@
+
 from rest_framework import serializers
 from .models import Restaurant, MenuCategory, MenuItem, RestaurantReview
 from django.contrib.auth import get_user_model
+
+class RestaurantCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Restaurant
+        fields = [
+            'name', 'description', 'cuisine_type', 'address',
+            'phone_number', 'email', 'website', 'image', 'price_range',
+            'opening_hours', 'features', 'is_active',
+            'delivery_fee', 'delivery_time', 'min_order'
+        ]
+        read_only_fields = []
 
 User = get_user_model()
 
@@ -50,14 +62,25 @@ class MenuItemSerializer(serializers.ModelSerializer):
 class MenuCategorySerializer(serializers.ModelSerializer):
     items = MenuItemSerializer(many=True, read_only=True)
     items_count = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = MenuCategory
-        fields = ['id', 'name', 'description', 'meal_period', 'display_order', 'items', 'items_count']
+        fields = ['id', 'name', 'description', 'meal_period', 'display_order', 'items', 'items_count', 'image']
         read_only_fields = ['id']
 
     def get_items_count(self, obj):
         return obj.items.filter(is_available=True).count()
+
+    def get_image(self, obj):
+        # If MenuCategory has an image field, return its URL, else fallback to a placeholder
+        if hasattr(obj, 'image') and obj.image and hasattr(obj.image, 'url'):
+            try:
+                return self.context['request'].build_absolute_uri(obj.image.url)
+            except:
+                pass
+        # Fallback placeholder image for category
+        return 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&h=200&fit=crop'
 
 class RestaurantListSerializer(serializers.ModelSerializer):
     """Simplified serializer for restaurant listings"""
@@ -70,10 +93,10 @@ class RestaurantListSerializer(serializers.ModelSerializer):
         model = Restaurant
         fields = [
             'id', 'slug', 'name', 'description', 'cuisine_type', 'address',
-            'phone_number', 'image', 'rating', 'price_range',
+            'phone_number', 'email', 'website', 'image', 'rating', 'price_range',
             'delivery_fee', 'delivery_time', 'min_order',
             'categories_count', 'menu_items_count', 'reviews_count',
-            'is_active'
+            'is_active', 'features', 'opening_hours'
         ]
 
     def get_image(self, obj):

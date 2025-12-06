@@ -54,11 +54,23 @@ router.register(r'reviews', RestaurantReviewViewSet, basename='restaurantreview'
 
 
 urlpatterns = [
-    path('', api_root, name='api-root'),
+    path('', 
+        api_root, 
+        name='api-root'
+    ),
     # Favicon to avoid 404 in browsers hitting backend root
-    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True)),
-    path('api/', include(router.urls)),
-    path('api/test/', test_api, name='api-test'),
+    path('favicon.ico', 
+        RedirectView.as_view(url='/static/favicon.ico', 
+                             permanent=True
+                            ),
+    ),
+    path('api/', 
+        include(router.urls)
+    ),
+    path('api/test/', 
+        test_api, 
+        name='api-test'
+    ),
     path('admin/', admin.site.urls),
     path('api/auth/', include('djoser.urls')),
     path('api/auth/', include('djoser.urls.jwt')),
