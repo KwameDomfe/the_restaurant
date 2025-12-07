@@ -55,11 +55,54 @@ const LoginPage = () => {
     fetchUserTypes();
   }, [fetchUserTypes]);
 
+  const formatPhoneNumber = (value) => {
+    // Remove all non-digit characters except +
+    const cleaned = value.replace(/[^\d+]/g, '');
+    
+    // Separate country code and digits
+    let countryCode = '';
+    let digits = cleaned;
+    
+    if (cleaned.startsWith('+')) {
+      digits = cleaned.slice(1);
+      countryCode = '+';
+    }
+    
+    // Limit total digits to 15
+    digits = digits.slice(0, 15);
+    
+    // Format with dashes: +XXX-XX-XXX-XXXX
+    if (!digits) return countryCode;
+    
+    let formatted = countryCode;
+    
+    // Country code (first 1-3 digits)
+    if (digits.length <= 3) {
+      formatted += digits;
+    } else if (digits.length <= 5) {
+      formatted += digits.slice(0, 3) + '-' + digits.slice(3);
+    } else if (digits.length <= 8) {
+      formatted += digits.slice(0, 3) + '-' + digits.slice(3, 5) + '-' + digits.slice(5);
+    } else {
+      formatted += digits.slice(0, 3) + '-' + digits.slice(3, 5) + '-' + digits.slice(5, 8) + '-' + digits.slice(8);
+    }
+    
+    return formatted;
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    let processedValue = value;
+    
+    // Format phone number as user types
+    if (name === 'phoneNumber') {
+      processedValue = formatPhoneNumber(value);
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: processedValue
     }));
     
     // Clear specific error when user starts typing
@@ -166,16 +209,23 @@ const LoginPage = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/accounts/auth/register/`, {
+      const registrationData = {
         username: formData.username,
         email: formData.email,
         first_name: formData.firstName,
         last_name: formData.lastName,
-        phone_number: formData.phoneNumber,
         user_type: formData.userType,
         password: formData.password,
         password_confirm: formData.passwordConfirm
-      });
+      };
+      
+      // Only include phone number if provided
+      if (formData.phoneNumber && formData.phoneNumber.trim()) {
+        // Remove dashes for backend (keep only + and digits)
+        registrationData.phone_number = formData.phoneNumber.replace(/-/g, '');
+      }
+      
+      const response = await axios.post(`${API_BASE_URL}/accounts/auth/register/`, registrationData);
       
       // Store token
       localStorage.setItem('authToken', response.data.token);
@@ -184,7 +234,17 @@ const LoginPage = () => {
       setUser(response.data.user);
       
       showToast(response.data.message || 'Registration successful!', 'success');
-      navigate('/');
+      
+      // Show verification message if email verification was sent
+      if (response.data.verification_email_sent) {
+        showToast('Please check your email for verification code', 'info');
+        // Redirect to verification page
+        setTimeout(() => {
+          navigate('/verify-email?email=' + encodeURIComponent(response.data.user.email));
+        }, 1500);
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       const errorData = error.response?.data;
       if (errorData) {
@@ -198,6 +258,7 @@ const LoginPage = () => {
           }
         });
         setErrors(newErrors);
+        showToast('Please fix the errors in the form', 'error');
       } else {
         showToast('Registration failed. Please try again.', 'error');
       }
@@ -364,15 +425,22 @@ const LoginPage = () => {
 
                 {!isLogin && (
                   <div className="mb-3">
-                    <label className="form-label">Phone Number</label>
+                    <label className="form-label">Phone Number <span className="text-muted">(Optional)</span></label>
                     <input
                       type="tel"
                       name="phoneNumber"
-                      className="form-control"
+                      className={`form-control ${errors.phoneNumber || errors.phone_number ? 'is-invalid' : ''}`}
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
-                      placeholder="+1234567890"
+                      placeholder="+233-24-345-3454"
+                      maxLength="20"
                     />
+                    <small className="form-text text-muted">
+                      Format: +[country code]-[area]-[number]-[number] (e.g., +233-24-345-3454)
+                    </small>
+                    {(errors.phoneNumber || errors.phone_number) && (
+                      <div className="invalid-feedback">{errors.phoneNumber || errors.phone_number}</div>
+                    )}
                   </div>
                 )}
 

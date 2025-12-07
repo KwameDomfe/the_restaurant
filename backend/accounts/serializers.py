@@ -101,7 +101,22 @@ class UserSerializer(serializers.ModelSerializer):
     can_manage_restaurants = serializers.ReadOnlyField()
     can_deliver_orders = serializers.ReadOnlyField()
     
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(write_only=True, min_length=8, required=False)
+    
+    def to_representation(self, instance):
+        """Override to add cache-busting timestamp and full URL to profile_picture"""
+        from datetime import datetime
+        data = super().to_representation(instance)
+        if data.get('profile_picture'):
+            # Build absolute URI for the profile picture
+            request = self.context.get('request')
+            if request:
+                data['profile_picture'] = request.build_absolute_uri(data['profile_picture'])
+            # Add timestamp to prevent browser caching
+            timestamp = int(instance.updated_at.timestamp() * 1000) if hasattr(instance, 'updated_at') and instance.updated_at else int(datetime.now().timestamp() * 1000)
+            separator = '&' if '?' in data['profile_picture'] else '?'
+            data['profile_picture'] = f"{data['profile_picture']}{separator}v={timestamp}"
+        return data
 
     class Meta:
         model = User
@@ -155,6 +170,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     """Simplified serializer for user registration"""
     password = serializers.CharField(write_only=True, min_length=6)
     password_confirm = serializers.CharField(write_only=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = User
@@ -162,6 +178,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'username', 'email', 'first_name', 'last_name',
             'phone_number', 'user_type', 'password', 'password_confirm'
         ]
+    
+    def validate_phone_number(self, value):
+        """Validate phone number format if provided"""
+        if value and value.strip():  # Only validate if not empty
+            import re
+            phone_regex = r'^\+?1?\d{9,15}$'
+            if not re.match(phone_regex, value):
+                raise serializers.ValidationError(
+                    "Phone number must be in format: '+999999999'. 9-15 digits allowed."
+                )
+        return value if value else ''
     
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():

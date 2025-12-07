@@ -8,6 +8,8 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.crypto import get_random_string
+from django.utils import timezone
+from datetime import timedelta
 from .models import (
     UserProfile, CustomerProfile, VendorProfile, 
     DeliveryProfile, StaffProfile, UserVerification
@@ -172,12 +174,17 @@ def register_user(request):
         # Send welcome email based on user type
         send_welcome_email(user)
         
+        # Send verification email
+        verification_sent = send_verification_email(user)
+        
         # Return user data and token
         user_serializer = UserSerializer(user)
         return Response({
             'token': token.key,
             'user': user_serializer.data,
-            'message': f'{user.get_user_type_display()} account created successfully!'
+            'message': f'{user.get_user_type_display()} account created successfully!',
+            'verification_email_sent': verification_sent,
+            'requires_verification': True
         }, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -260,21 +267,52 @@ def request_password_reset(request):
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def verify_email(request):
-    """Verify user's email address"""
-    token = request.data.get('token')
+    """Verify user's email address using verification code"""
+    code = request.data.get('code')
     email = request.data.get('email')
     
-    if not token or not email:
+    if not code or not email:
         return Response({
-            'error': 'Token and email are required'
+            'error': 'Verification code and email are required'
         }, status=status.HTTP_400_BAD_REQUEST)
     
     try:
         user = User.objects.get(email=email)
-        # Verify token (simplified - in production use secure token verification)
-        # For now, just mark as verified
+        
+        # Check if already verified
+        if user.email_verified:
+            return Response({
+                'message': 'Email already verified',
+                'email': email
+            })
+        
+        # Get verification record
+        try:
+            verification = user.verification
+        except:
+            return Response({
+                'error': 'No verification record found'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if code matches and not expired
+        if verification.email_verification_code != code:
+            return Response({
+                'error': 'Invalid verification code'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if verification.code_expires_at and verification.code_expires_at < timezone.now():
+            return Response({
+                'error': 'Verification code has expired'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Mark email as verified
         user.email_verified = True
-        user.save(update_fields=['email_verified'])
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=['email_verified', 'email_verified_at'])
+        
+        # Clear verification code
+        verification.email_verification_code = ''
+        verification.save()
         
         return Response({
             'message': 'Email verified successfully',
@@ -282,7 +320,45 @@ def verify_email(request):
         })
     except User.DoesNotExist:
         return Response({
-            'error': 'Invalid verification token'
+            'error': 'User not found'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def resend_verification_code(request):
+    """Resend verification code to user's email"""
+    email = request.data.get('email')
+    
+    if not email:
+        return Response({
+            'error': 'Email is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user = User.objects.get(email=email)
+        
+        # Check if already verified
+        if user.email_verified:
+            return Response({
+                'message': 'Email already verified'
+            })
+        
+        # Send verification email
+        verification_sent = send_verification_email(user)
+        
+        if verification_sent:
+            return Response({
+                'message': 'Verification code sent successfully',
+                'email': email
+            })
+        else:
+            return Response({
+                'error': 'Failed to send verification code'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except User.DoesNotExist:
+        return Response({
+            'error': 'User not found'
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -362,6 +438,53 @@ def send_welcome_email(user):
     except:
         # Email sending failed, but don't break registration
         pass
+
+
+def send_verification_email(user):
+    """Send email verification code to user"""
+    # Generate 6-digit verification code
+    verification_code = get_random_string(6, allowed_chars='0123456789')
+    
+    # Store verification code
+    try:
+        verification = user.verification
+    except:
+        verification = UserVerification.objects.create(user=user)
+    
+    # Store code and expiry (you'll need to add these fields to UserVerification model)
+    verification.email_verification_code = verification_code
+    verification.code_expires_at = timezone.now() + timedelta(hours=24)
+    verification.save()
+    
+    subject = 'Verify Your Email - The Restaurant'
+    message = f'''
+Hi {user.get_full_name()},
+
+Thank you for registering with The Restaurant!
+
+Your verification code is: {verification_code}
+
+This code will expire in 24 hours.
+
+Alternatively, you can verify your email by clicking the link below:
+{getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')}/verify-email?code={verification_code}&email={user.email}
+
+Best regards,
+The Restaurant Team
+'''
+    
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+        return True
+    except Exception as e:
+        print(f"Failed to send verification email: {e}")
+        return False
 
 
 def send_password_reset_email(user, reset_token):

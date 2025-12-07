@@ -356,6 +356,11 @@ class UserVerification(models.Model):
     """Track verification status for different user types"""
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='verification')
     
+    # Email/Phone verification
+    email_verification_code = models.CharField(max_length=10, blank=True)
+    phone_verification_code = models.CharField(max_length=10, blank=True)
+    code_expires_at = models.DateTimeField(null=True, blank=True)
+    
     # Document verification
     identity_document_type = models.CharField(max_length=30, blank=True, choices=[
         ('passport', 'Passport'),

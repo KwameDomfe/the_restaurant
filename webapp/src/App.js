@@ -10,7 +10,11 @@ import MenuPage from './pages/MenuPage.jsx';
 import CheckoutPage from './pages/CheckoutPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import VerifyEmailPage from './pages/VerifyEmailPage.jsx';
 import RestaurantsPage from './pages/RestaurantPage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
+import OrdersPage from './pages/OrdersPage.jsx';
+import SettingsPage from './pages/SettingsPage.jsx';
 import './App.css';
 import MainFooter from './components/MainFooter.jsx';
 import MainHeader from './components/MainHeader.jsx';
@@ -224,6 +228,18 @@ function App() {
                 />
                 <Route path="/forgot-password" 
                   element={<ForgotPasswordPage />} 
+                />
+                <Route path="/verify-email" 
+                  element={<VerifyEmailPage />} 
+                />
+                <Route path="/profile" 
+                  element={<ProfilePage />} 
+                />
+                <Route path="/orders" 
+                  element={<OrdersPage />} 
+                />
+                <Route path="/settings" 
+                  element={<SettingsPage />} 
                 />
               </Routes>
             </main>

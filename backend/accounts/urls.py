@@ -4,7 +4,7 @@ from .views import (
     UserViewSet, UserProfileViewSet, CustomAuthToken,
     login_user, register_user, logout_user, check_username_availability,
     check_email_availability, request_password_reset,
-    verify_email, get_user_types
+    verify_email, resend_verification_code, get_user_types
 )
 
 router = DefaultRouter()
@@ -32,6 +32,7 @@ urlpatterns = [
     
     # Email verification
     path('auth/verify-email/', verify_email, name='verify_email'),
+    path('auth/resend-verification/', resend_verification_code, name='resend_verification'),
     
     # User types
     path('auth/user-types/', get_user_types, name='user_types'),
