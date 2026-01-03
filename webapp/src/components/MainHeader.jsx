@@ -1,25 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../App';
 import ProfileModal from './ProfileModal';
 
-const getHeaderTitle = (pathname) => {
-  if (pathname === '/') return 'Home';
-  if (pathname === '/restaurants') return 'All Restaurants';
-  if (pathname.startsWith('/restaurants/')) return 'Restaurant Details';
-  if (pathname === '/menu') return 'Menu';
-  if (pathname.startsWith('/menu-items/')) return 'Menu Item Details';
-  if (pathname === '/cart') return 'Your Cart';
-  if (pathname === '/checkout') return 'Checkout';
-  if (pathname === '/login') return 'Login';
-  if (pathname === '/forgot-password') return 'Forgot Password';
-  return 'The Restaurant';
-};
-
 const MainHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // const title = getHeaderTitle(location.pathname);
   const { user, setUser, showToast } = useApp();
   const [showProfileModal, setShowProfileModal] = useState(false);
 
