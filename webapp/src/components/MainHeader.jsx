@@ -4,7 +4,7 @@ import { useApp } from '../App';
 import ProfileModal from './ProfileModal';
 
 const MainHeader = () => {
-  const location = useLocation();
+  // const location = useLocation();
   const navigate = useNavigate();
   const { user, setUser, showToast } = useApp();
   const [showProfileModal, setShowProfileModal] = useState(false);
