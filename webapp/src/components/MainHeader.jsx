@@ -128,7 +128,7 @@ const MainHeader = () => {
                         {getUserInitials()}
                       </div>
                     )}
-                    <span className="d-none d-md-inline">{getUserDisplayName()}</span>
+                    {/* <span className="d-none d-md-inline">{getUserDisplayName()}</span> */}
                   </button>
                   <ul className="dropdown-menu dropdown-menu-end" 
                     aria-labelledby="userDropdown"
@@ -177,6 +177,16 @@ const MainHeader = () => {
                         <i className="bi bi-bag me-2"></i>My Orders
                       </button>
                     </li>
+                    {(user?.user_type === 'vendor' || user?.user_type === 'platform_admin') && (
+                      <li>
+                        <button 
+                          className="dropdown-item" 
+                          onClick={() => navigate('/vendor/dashboard')}
+                        >
+                          <i className="bi bi-shop me-2"></i>My Restaurants
+                        </button>
+                      </li>
+                    )}
                     <li>
                       <button 
                         className="dropdown-item" 
@@ -301,6 +311,17 @@ const MainHeader = () => {
                         <i className="bi bi-bag me-2"></i>My Orders
                       </Link>
                     </li>
+                    {(user?.user_type === 'vendor' || user?.user_type === 'platform_admin') && (
+                      <li className="nav-item mb-2">
+                        <Link 
+                          to="/vendor/dashboard" 
+                          className="nav-link text-dark"
+                          onClick={closeOffcanvas}
+                        >
+                          <i className="bi bi-shop me-2"></i>My Restaurants
+                        </Link>
+                      </li>
+                    )}
                     <li className="nav-item mb-2">
                       <Link 
                         to="/settings" 

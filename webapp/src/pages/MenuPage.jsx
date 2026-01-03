@@ -32,6 +32,7 @@ const MenuPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dietaryFilter, setDietaryFilter] = useState('');
   const [restaurantFilter, setRestaurantFilter] = useState('');
+  const [mealPeriodFilter, setMealPeriodFilter] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'restaurant'
 
@@ -64,8 +65,12 @@ const MenuPage = () => {
     if (!slug) {
       const urlParams = new URLSearchParams(window.location.search);
       const restaurantParam = urlParams.get('restaurant');
+      const mealPeriodParam = urlParams.get('meal_period');
       if (restaurantParam) {
         setRestaurantFilter(decodeURIComponent(restaurantParam));
+      }
+      if (mealPeriodParam) {
+        setMealPeriodFilter(decodeURIComponent(mealPeriodParam));
       }
     }
   }, [slug]);
@@ -126,6 +131,15 @@ const MenuPage = () => {
       );
     }
 
+    // Meal period filter
+    if (mealPeriodFilter) {
+      filtered = filtered.filter(item => {
+        // Handle both direct meal_period field and category object with meal_period
+        const itemMealPeriod = item.meal_period || item.category?.meal_period;
+        return itemMealPeriod === mealPeriodFilter;
+      });
+    }
+
     // Dietary filter
     if (dietaryFilter) {
       filtered = filtered.filter(item => {
@@ -151,7 +165,7 @@ const MenuPage = () => {
     });
 
     setFilteredItems(filtered);
-  }, [menuItems, searchTerm, dietaryFilter, restaurantFilter, sortBy]);
+  }, [menuItems, searchTerm, dietaryFilter, restaurantFilter, mealPeriodFilter, sortBy]);
 
   // Group items by restaurant for restaurant view
   const groupedByRestaurant = filteredItems.reduce((acc, item) => {
@@ -208,8 +222,21 @@ const MenuPage = () => {
             <p className="lead text-muted">
               {restaurantName
                 ? `Browse the menu for ${restaurantName}`
+                : mealPeriodFilter
+                ? `Browse ${mealPeriodFilter.replace('_', ' ')} menu items`
                 : 'Discover our delicious selection of carefully crafted dishes'}
             </p>
+            {mealPeriodFilter && (
+              <button 
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => {
+                  setMealPeriodFilter('');
+                  window.history.pushState({}, '', '/menu');
+                }}
+              >
+                Clear meal period filter
+              </button>
+            )}
           </div>
           <button 
             className="btn btn-outline-primary"

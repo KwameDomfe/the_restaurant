@@ -1,13 +1,46 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useApp } from '../App';
+import RestaurantFormModal from './RestaurantFormModal';
+import axios from 'axios';
 
 
-const RestaurantCard = ({ restaurant }) => {
+const RestaurantCard = ({ restaurant, onUpdate }) => {
+  const { user, API_BASE_URL } = useApp();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const canEdit = restaurant.is_owner || (user && user.user_type === 'platform_admin');
   
   // // Debug: log restaurant data to console
   // console.log('Restaurant data:', restaurant);
   
   const imageSrc = restaurant.image 
     || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=250&fit=crop&crop=center';
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this restaurant? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      await axios.delete(
+        `${API_BASE_URL}/restaurants/${restaurant.slug}/`,
+        {
+          headers: {
+            'Authorization': `Token ${token}`
+          }
+        }
+      );
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      alert('Failed to delete restaurant: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setDeleting(false);
+    }
+  };
   
   // Helper to render graphical stars
   const renderStars = (rating) => {
@@ -30,13 +63,13 @@ const RestaurantCard = ({ restaurant }) => {
       <img src={imageSrc}
         alt={restaurant.name}
         className="card-img-top mb-3"
-        style={{objectFit:'cover',height:'320px'}}
+        style={{objectFit:'cover',height:'480px'}}
       />
       <div className="card-body">
         <h5 className="card-title"
         >
           {restaurant.name} 
-          <span className="badge bg-primary me-2">
+          <span className="badge bg-primary ms-3">
             {restaurant.cuisine_type}
           </span>
         </h5>
@@ -60,48 +93,7 @@ const RestaurantCard = ({ restaurant }) => {
             }
           </span>
         </div>
-        <div className="mb-2"
-        >
-          <h4>Address:</h4> <span className="me-2">
-            <i className="bi bi-geo-alt"></i> 
-            {restaurant.address}
-          </span>
-        </div>
-        <div className="mb-2"><h4>Delivery & Minimum Order:</h4>
-          <div className="me-2">
-            <i className="bi bi-truck"></i> Delivery Fee: GHC {restaurant.delivery_fee}
-          </div>
-          <div className="me-2">
-            <i className="bi bi-truck"></i> Delivery Time: {restaurant.delivery_time}
-          </div>
-          <span className="me-2">
-            <i className="bi bi-cash"></i> Min Order: GHC {restaurant.min_order}
-          </span>
-        </div>
-        <div>
-          <h4>Contact:</h4>
-          <div className="me-2">
-            <i className="bi bi-telephone"></i> {restaurant.phone_number && restaurant.phone_number.trim() ? restaurant.phone_number : 'Not available'}
-          </div>
-        </div>
-        <div>
-          <h4>Email:</h4>
-          <div className="me-2">
-            <i className="bi bi-envelope"></i> {restaurant.email && restaurant.email.trim() ? (
-              <a href={`mailto:${restaurant.email}`}>{restaurant.email}</a>
-            ) : 'Not available'}
-          </div>
-        </div>
-        <div>
-          <h4>Website:</h4>
-          <div className="me-2">
-            <i className="bi bi-globe"></i> {restaurant.website && restaurant.website.trim() ? (
-              <a href={restaurant.website} target="_blank" rel="noopener noreferrer">
-                {restaurant.website}
-              </a>
-            ) : 'Not available'}
-          </div>
-        </div>
+        
         {
           restaurant.features && restaurant.features.length > 0 && (
             <div className="mt-2">
@@ -121,17 +113,45 @@ const RestaurantCard = ({ restaurant }) => {
         }
         <div className="mt-3 d-flex gap-2">
           <Link to={`/restaurants/${restaurant.slug}`} 
-            className="btn btn-outline-primary w-50"
+            className="btn btn-outline-primary flex-grow-1"
           >
             View Details
           </Link>
           <Link to={`/restaurants/${restaurant.slug}/menu`} 
-            className="btn btn-outline-success w-50"
+            className="btn btn-outline-success flex-grow-1"
           >
             View Menu
           </Link>
         </div>
+
+        {canEdit && (
+          <div className="mt-2 d-flex gap-2">
+            <button
+              className="btn btn-sm btn-warning flex-grow-1"
+              onClick={() => setShowEditModal(true)}
+            >
+              <i className="bi bi-pencil"></i> Edit
+            </button>
+            <button
+              className="btn btn-sm btn-danger flex-grow-1"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              <i className="bi bi-trash"></i> {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        )}
       </div>
+
+      <RestaurantFormModal
+        show={showEditModal}
+        onHide={() => setShowEditModal(false)}
+        restaurant={restaurant}
+        onSuccess={() => {
+          setShowEditModal(false);
+          if (onUpdate) onUpdate();
+        }}
+      />
     </div>
   );
 };

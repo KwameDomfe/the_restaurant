@@ -1,8 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
+import { useApp } from '../App';
+import MenuItemFormModal from '../components/MenuItemFormModal';
+import axios from 'axios';
+
 // Enhanced Menu Item Card Component
-const MenuItemCard = ({ item }) => {
+const MenuItemCard = ({ item, onUpdate }) => {
   const { addToCart } = useCart();
+  const { user, API_BASE_URL } = useApp();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Check if user can edit (owns the restaurant or is admin)
+  const canEdit = user && (
+    (item.restaurant && item.restaurant.owner === user.id) ||
+    user.user_type === 'platform_admin'
+  );
   const getSpiceLevel = (level) => {
     const spices = ['🌶️', '🌶️🌶️', '🌶️🌶️🌶️', '🌶️🌶️🌶️🌶️'];
     return level > 0 ? spices[level - 1] || '🌶️🌶️🌶️🌶️' : '';
@@ -40,7 +53,7 @@ const MenuItemCard = ({ item }) => {
   };
 
   return (
-    <div className="col-md-6 col-lg-4 mb-4">
+    <div className="mb-4">
       <div className="card h-100 shadow-sm menu-item-card">
         <img 
           src={getMenuItemImage(item)} 
@@ -154,8 +167,52 @@ const MenuItemCard = ({ item }) => {
               {item.is_available ? '🛒 Add to Cart' : 'Unavailable'}
             </button>
           </div>
+
+          {/* Edit/Delete buttons for owners/admins */}
+          {canEdit && (
+            <div className="mt-2 d-flex gap-2">
+              <button
+                className="btn btn-sm btn-warning flex-grow-1"
+                onClick={() => setShowEditModal(true)}
+              >
+                <i className="bi bi-pencil"></i> Edit
+              </button>
+              <button
+                className="btn btn-sm btn-danger flex-grow-1"
+                onClick={async () => {
+                  if (!window.confirm('Delete this menu item?')) return;
+                  setDeleting(true);
+                  try {
+                    const token = localStorage.getItem('authToken');
+                    await axios.delete(`${API_BASE_URL}/menu-items/${item.slug}/`, {
+                      headers: { 'Authorization': `Token ${token}` }
+                    });
+                    if (onUpdate) onUpdate();
+                  } catch (err) {
+                    alert('Failed to delete: ' + (err.response?.data?.detail || err.message));
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+              >
+                <i className="bi bi-trash"></i> {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      <MenuItemFormModal
+        show={showEditModal}
+        onHide={() => setShowEditModal(false)}
+        menuItem={item}
+        restaurantId={item.restaurant}
+        onSuccess={() => {
+          setShowEditModal(false);
+          if (onUpdate) onUpdate();
+        }}
+      />
     </div>
   );
 };

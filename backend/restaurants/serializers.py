@@ -7,12 +7,27 @@ class RestaurantCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
         fields = [
-            'name', 'description', 'cuisine_type', 'address',
+            'id', 'slug', 'name', 'description', 'cuisine_type', 'address',
             'phone_number', 'email', 'website', 'image', 'price_range',
             'opening_hours', 'features', 'is_active',
-            'delivery_fee', 'delivery_time', 'min_order'
+            'delivery_fee', 'delivery_time', 'min_order', 'rating',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = []
+        read_only_fields = ['id', 'slug', 'rating', 'created_at', 'updated_at']
+    
+    def to_representation(self, instance):
+        """Return detailed representation with full image URL"""
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+        
+        # Build absolute URI for image if it exists
+        if instance.image and hasattr(instance.image, 'url'):
+            try:
+                representation['image'] = request.build_absolute_uri(instance.image.url)
+            except:
+                representation['image'] = None
+        
+        return representation
 
 User = get_user_model()
 
@@ -88,6 +103,8 @@ class RestaurantListSerializer(serializers.ModelSerializer):
     menu_items_count = serializers.SerializerMethodField()
     reviews_count = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
+    owner_name = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Restaurant
@@ -96,8 +113,17 @@ class RestaurantListSerializer(serializers.ModelSerializer):
             'phone_number', 'email', 'website', 'image', 'rating', 'price_range',
             'delivery_fee', 'delivery_time', 'min_order',
             'categories_count', 'menu_items_count', 'reviews_count',
-            'is_active', 'features', 'opening_hours'
+            'is_active', 'features', 'opening_hours', 'owner', 'owner_name', 'is_owner'
         ]
+    
+    def get_owner_name(self, obj):
+        return obj.owner.username if obj.owner else None
+    
+    def get_is_owner(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.owner == request.user or request.user.user_type == 'platform_admin'
+        return False
 
     def get_image(self, obj):
         """Return uploaded image if available, otherwise cuisine-specific placeholder"""

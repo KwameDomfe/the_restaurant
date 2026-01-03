@@ -232,14 +232,48 @@ class IngredientsTableWidget(forms.Widget):
 """
                 html = html.replace('{container_id}', container_id).replace('{hidden_id}', hidden_id).replace('{blocks_html}', blocks_html).replace('{name}', name)
                 return mark_safe(html)
+
 class MenuItemAdminForm(forms.ModelForm):
+    ALLERGEN_CHOICES = [
+        ('milk', 'Milk'),
+        ('eggs', 'Eggs'),
+        ('fish', 'Fish'),
+        ('shellfish', 'Shellfish'),
+        ('tree_nuts', 'Tree Nuts'),
+        ('peanuts', 'Peanuts'),
+        ('wheat', 'Wheat'),
+        ('soybeans', 'Soybeans'),
+        ('sesame', 'Sesame'),
+        ('gluten', 'Gluten'),
+        ('celery', 'Celery'),
+        ('mustard', 'Mustard'),
+        ('sulphites', 'Sulphites'),
+        ('lupin', 'Lupin'),
+        ('molluscs', 'Molluscs'),
+    ]
+    
+    allergens = forms.MultipleChoiceField(
+        choices=ALLERGEN_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Select all allergens present in this dish"
+    )
+    
     class Meta:
         model = MenuItem
         fields = '__all__'
+        
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if 'ingredients' in self.fields:
             self.fields['ingredients'].widget = IngredientsTableWidget()
+        # Initialize allergens checkboxes from JSON list
+        if self.instance and isinstance(self.instance.allergens, list):
+            self.fields['allergens'].initial = self.instance.allergens
+    
+    def clean_allergens(self):
+        # Return as list for JSONField storage
+        return list(self.cleaned_data.get('allergens', []))
     
 
 from django_json_widget.widgets import JSONEditorWidget
@@ -256,6 +290,9 @@ class RestaurantAdminForm(forms.ModelForm):
         ('vegan_options', 'Vegan options'),
         ('live_music', 'Live music'),
     ]
+    
+    # Generate time choices in 30-minute intervals
+    TIME_CHOICES = [('', '---')] + [(f'{h:02d}:{m:02d}', f'{h:02d}:{m:02d}') for h in range(24) for m in (0, 30)]
 
     features = forms.MultipleChoiceField(
         choices=FEATURES_CHOICES,
@@ -266,26 +303,26 @@ class RestaurantAdminForm(forms.ModelForm):
 
     # Per-day opening hours fields for end-user friendly input
     MON_closed = forms.BooleanField(required=False, label='Closed')
-    MON_open = forms.TimeField(required=False, label='Open')
-    MON_close = forms.TimeField(required=False, label='Close')
+    MON_open = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Open')
+    MON_close = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Close')
     TUE_closed = forms.BooleanField(required=False, label='Closed')
-    TUE_open = forms.TimeField(required=False, label='Open')
-    TUE_close = forms.TimeField(required=False, label='Close')
+    TUE_open = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Open')
+    TUE_close = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Close')
     WED_closed = forms.BooleanField(required=False, label='Closed')
-    WED_open = forms.TimeField(required=False, label='Open')
-    WED_close = forms.TimeField(required=False, label='Close')
+    WED_open = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Open')
+    WED_close = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Close')
     THU_closed = forms.BooleanField(required=False, label='Closed')
-    THU_open = forms.TimeField(required=False, label='Open')
-    THU_close = forms.TimeField(required=False, label='Close')
+    THU_open = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Open')
+    THU_close = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Close')
     FRI_closed = forms.BooleanField(required=False, label='Closed')
-    FRI_open = forms.TimeField(required=False, label='Open')
-    FRI_close = forms.TimeField(required=False, label='Close')
+    FRI_open = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Open')
+    FRI_close = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Close')
     SAT_closed = forms.BooleanField(required=False, label='Closed')
-    SAT_open = forms.TimeField(required=False, label='Open')
-    SAT_close = forms.TimeField(required=False, label='Close')
+    SAT_open = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Open')
+    SAT_close = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Close')
     SUN_closed = forms.BooleanField(required=False, label='Closed')
-    SUN_open = forms.TimeField(required=False, label='Open')
-    SUN_close = forms.TimeField(required=False, label='Close')
+    SUN_open = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Open')
+    SUN_close = forms.ChoiceField(choices=TIME_CHOICES, required=False, label='Close')
 
     class Meta:
         model = Restaurant
@@ -328,8 +365,8 @@ class RestaurantAdminForm(forms.ModelForm):
                 if open_t and close_t:
                     result[key] = {
                         'closed': False,
-                        'open': open_t.strftime('%H:%M'),
-                        'close': close_t.strftime('%H:%M')
+                        'open': open_t if isinstance(open_t, str) else open_t.strftime('%H:%M'),
+                        'close': close_t if isinstance(close_t, str) else close_t.strftime('%H:%M')
                     }
                 else:
                     result[key] = {'closed': False}
@@ -340,20 +377,8 @@ class RestaurantAdminForm(forms.ModelForm):
         """Override save to handle custom fields"""
         instance = super().save(commit=False)
         
-        # Reconstruct nutritional_info JSON
-        instance.nutritional_info = {
-            'calories': self.cleaned_data.get('calories'),
-            'protein': self.cleaned_data.get('protein'),
-            'carbohydrates': self.cleaned_data.get('carbohydrates'),
-            'fat': self.cleaned_data.get('fat'),
-            'fiber': self.cleaned_data.get('fiber'),
-            'sodium': self.cleaned_data.get('sodium'),
-            'sugar': self.cleaned_data.get('sugar'),
-        }
-        
-        # The 'allergens' and 'ingredients' fields are handled by their clean methods
-        instance.allergens = self.cleaned_data.get('allergens', [])
-        instance.ingredients = self.cleaned_data.get('ingredients', [])
+        # opening_hours is set in clean() method via cleaned_data
+        instance.opening_hours = self.cleaned_data.get('opening_hours', {})
         
         if commit:
             instance.save()
@@ -438,13 +463,41 @@ class RestaurantAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (None, {
-            'fields': ('name', 'slug', 'description', 'image')
+            'fields': ('name', 'slug', 'description', 'image', 'owner')
         }),
         ('Details', {
             'fields': ('cuisine_type', 'price_range', 'rating', 'address', 'phone_number', 'email', 'website')
         }),
+        ('Opening Hours - Monday', {
+            'fields': (('MON_closed', 'MON_open', 'MON_close'),),
+            'classes': ('collapse',),
+        }),
+        ('Opening Hours - Tuesday', {
+            'fields': (('TUE_closed', 'TUE_open', 'TUE_close'),),
+            'classes': ('collapse',),
+        }),
+        ('Opening Hours - Wednesday', {
+            'fields': (('WED_closed', 'WED_open', 'WED_close'),),
+            'classes': ('collapse',),
+        }),
+        ('Opening Hours - Thursday', {
+            'fields': (('THU_closed', 'THU_open', 'THU_close'),),
+            'classes': ('collapse',),
+        }),
+        ('Opening Hours - Friday', {
+            'fields': (('FRI_closed', 'FRI_open', 'FRI_close'),),
+            'classes': ('collapse',),
+        }),
+        ('Opening Hours - Saturday', {
+            'fields': (('SAT_closed', 'SAT_open', 'SAT_close'),),
+            'classes': ('collapse',),
+        }),
+        ('Opening Hours - Sunday', {
+            'fields': (('SUN_closed', 'SUN_open', 'SUN_close'),),
+            'classes': ('collapse',),
+        }),
         ('Operations', {
-            'fields': ('opening_hours', 'features', 'delivery_fee', 'delivery_time', 'min_order', 'is_active')
+            'fields': ('features', 'delivery_fee', 'delivery_time', 'min_order', 'is_active')
         }),
     )
 
@@ -538,7 +591,7 @@ class RestaurantReviewAdmin(admin.ModelAdmin):
             'fields': ('restaurant', 'user', 'rating', 'comment')
         }),
         ('Images', {
-            'fields': ('image_uploads', 'replace_images', 'images_preview')
+            'fields': ('image_uploads', 'images_preview')
         }),
     )
     readonly_fields = ('created_at', 'updated_at', 'images_preview')

@@ -11,10 +11,13 @@ import CheckoutPage from './pages/CheckoutPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.jsx';
+import CategoryDetailPage from './pages/CategoryDetailPage.jsx';
 import RestaurantsPage from './pages/RestaurantPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import OrdersPage from './pages/OrdersPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import VendorDashboard from './pages/VendorDashboard.jsx';
+import ManageRestaurantMenu from './pages/ManageRestaurantMenu.jsx';
 import './App.css';
 import MainFooter from './components/MainFooter.jsx';
 import MainHeader from './components/MainHeader.jsx';
@@ -232,6 +235,9 @@ function App() {
                 <Route path="/verify-email" 
                   element={<VerifyEmailPage />} 
                 />
+                <Route path="/categories/:slug" 
+                  element={<CategoryDetailPage />} 
+                />
                 <Route path="/profile" 
                   element={<ProfilePage />} 
                 />
@@ -240,6 +246,12 @@ function App() {
                 />
                 <Route path="/settings" 
                   element={<SettingsPage />} 
+                />
+                <Route path="/vendor/dashboard" 
+                  element={<VendorDashboard />} 
+                />
+                <Route path="/vendor/restaurants/:slug/menu" 
+                  element={<ManageRestaurantMenu />} 
                 />
               </Routes>
             </main>

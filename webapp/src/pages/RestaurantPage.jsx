@@ -11,6 +11,8 @@ const RestaurantsPage = () => {
   const location = window.location;
   const params = new URLSearchParams(location.search);
   const cuisineFilter = params.get('cuisine');
+  const categoryFilter = params.get('category');
+  const mealPeriodFilter = params.get('meal_period');
   const [restaurantsLoading, setRestaurantsLoading] = React.useState(false);
   const [menuLoading, setMenuLoading] = React.useState(false);
 
@@ -95,14 +97,21 @@ const RestaurantsPage = () => {
       )}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h1>🏪 {cuisineFilter ? `${cuisineFilter} Restaurants` : 'All Restaurants'}</h1>
+          <h1>🏪 {categoryFilter ? `${categoryFilter} Restaurants` : cuisineFilter ? `${cuisineFilter} Restaurants` : 'All Restaurants'}</h1>
           <p className="lead text-muted">
             {
-              cuisineFilter
+              categoryFilter
+              ? `Restaurants serving ${categoryFilter}${mealPeriodFilter ? ` for ${mealPeriodFilter}` : ''}`
+              : cuisineFilter
               ? `Discover our ${cuisineFilter} partner restaurants and their specialties`
               : 'Discover our partner restaurants and their specialties'
             }
           </p>
+          {(categoryFilter || cuisineFilter || mealPeriodFilter) && (
+            <Link to="/restaurants" className="btn btn-sm btn-outline-secondary">
+              Clear Filters
+            </Link>
+          )}
         </div>
         <button 
           className="btn btn-outline-primary"
@@ -114,11 +123,55 @@ const RestaurantsPage = () => {
       </div>
       
       {
-        (restaurants.filter(r => !cuisineFilter || r.cuisine_type === cuisineFilter).length > 0) ? (
+        (restaurants.filter(r => {
+          // Filter by cuisine
+          if (cuisineFilter && r.cuisine_type !== cuisineFilter) return false;
+          
+          // Filter by category - check if restaurant has menu items in this category
+          if (categoryFilter) {
+            const restaurantMenus = menuItems.filter(item => item.restaurant === r.id);
+            const hasCategory = restaurantMenus.some(item => 
+              item.category && item.category.toLowerCase().includes(categoryFilter.toLowerCase())
+            );
+            if (!hasCategory) return false;
+          }
+          
+          // Filter by meal period
+          if (mealPeriodFilter) {
+            const restaurantMenus = menuItems.filter(item => item.restaurant === r.id);
+            const hasMealPeriod = restaurantMenus.some(item => 
+              item.meal_period === mealPeriodFilter
+            );
+            if (!hasMealPeriod) return false;
+          }
+          
+          return true;
+        }).length > 0) ? (
           <div className="row">
             {
               restaurants
-                .filter(r => !cuisineFilter || r.cuisine_type === cuisineFilter)
+                .filter(r => {
+                  // Same filtering logic
+                  if (cuisineFilter && r.cuisine_type !== cuisineFilter) return false;
+                  
+                  if (categoryFilter) {
+                    const restaurantMenus = menuItems.filter(item => item.restaurant === r.id);
+                    const hasCategory = restaurantMenus.some(item => 
+                      item.category && item.category.toLowerCase().includes(categoryFilter.toLowerCase())
+                    );
+                    if (!hasCategory) return false;
+                  }
+                  
+                  if (mealPeriodFilter) {
+                    const restaurantMenus = menuItems.filter(item => item.restaurant === r.id);
+                    const hasMealPeriod = restaurantMenus.some(item => 
+                      item.meal_period === mealPeriodFilter
+                    );
+                    if (!hasMealPeriod) return false;
+                  }
+                  
+                  return true;
+                })
                 .map(
                   restaurant => (
                     <RestaurantCard key={restaurant.id} 

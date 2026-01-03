@@ -10,10 +10,42 @@ from .serializers import (
     RestaurantSearchSerializer, RestaurantCreateSerializer
 )
 
+class IsOwnerOrAdminOrReadOnly(permissions.BasePermission):
+    """
+    Custom permission:
+    - Read permissions for everyone
+    - Create permissions for vendors and admins
+    - Edit/delete permissions only for owners or admins
+    """
+    def has_permission(self, request, view):
+        # Allow read operations
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        # Create: allow vendors and admins
+        if view.action == 'create':
+            return request.user and request.user.is_authenticated and \
+                   request.user.user_type in ['vendor', 'platform_admin']
+        
+        # For update/delete, check object permission
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        # Allow read operations
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        # Allow admins to edit anything
+        if request.user.user_type == 'platform_admin':
+            return True
+        
+        # Allow owners to edit their own restaurants
+        return obj.owner == request.user
+
 class RestaurantViewSet(viewsets.ModelViewSet):
     queryset = Restaurant.objects.filter(is_active=True)
     lookup_field = 'slug'
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsOwnerOrAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['cuisine_type', 'price_range']
     search_fields = ['name', 'description', 'cuisine_type', 'address']
@@ -23,9 +55,22 @@ class RestaurantViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return RestaurantListSerializer
-        elif self.action == 'create':
+        elif self.action in ['create', 'update', 'partial_update']:
             return RestaurantCreateSerializer
         return RestaurantDetailSerializer
+    
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+    
+    @action(detail=False, methods=['get'], url_path='my-restaurants')
+    def my_restaurants(self, request):
+        """Get restaurants owned by the current user"""
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        restaurants = Restaurant.objects.filter(owner=request.user)
+        serializer = RestaurantListSerializer(restaurants, many=True, context={'request': request})
+        return Response(serializer.data)
 
     @action(detail=False, methods=['post'])
     def search(self, request):
@@ -153,17 +198,38 @@ class RestaurantViewSet(viewsets.ModelViewSet):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class IsRestaurantOwnerOrAdminOrReadOnly(permissions.BasePermission):
+    """
+    Permission for menu items and categories:
+    - Read permissions for everyone
+    - Create/edit/delete only for restaurant owners or admins
+    """
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        if request.user.user_type == 'platform_admin':
+            return True
+        
+        # Check if user owns the restaurant
+        return obj.restaurant.owner == request.user
+
 class MenuCategoryViewSet(viewsets.ModelViewSet):
     queryset = MenuCategory.objects.all()
     serializer_class = MenuCategorySerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsRestaurantOwnerOrAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['restaurant']
 
 class MenuItemViewSet(viewsets.ModelViewSet):
     queryset = MenuItem.objects.filter(is_available=True).order_by('id')
     serializer_class = MenuItemSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsRestaurantOwnerOrAdminOrReadOnly]
     lookup_field = 'slug'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = [
@@ -171,6 +237,22 @@ class MenuItemViewSet(viewsets.ModelViewSet):
         'is_vegan', 'is_gluten_free', 'spice_level'
     ]
     search_fields = ['name', 'description', 'ingredients']
+    
+    def get_queryset(self):
+        """Show all items to owners/admins, only available items to others"""
+        user = self.request.user
+        if user.is_authenticated and user.user_type in ['vendor', 'platform_admin']:
+            if self.action in ['list', 'retrieve']:
+                # For listing, still filter by is_available unless they own the restaurant
+                restaurant_id = self.request.query_params.get('restaurant')
+                if restaurant_id:
+                    try:
+                        restaurant = Restaurant.objects.get(id=restaurant_id)
+                        if restaurant.owner == user or user.user_type == 'platform_admin':
+                            return MenuItem.objects.filter(restaurant=restaurant).order_by('id')
+                    except Restaurant.DoesNotExist:
+                        pass
+        return MenuItem.objects.filter(is_available=True).order_by('id')
 
     @action(detail=False, methods=['get'], url_path='meal-periods')
     def by_meal_period(self, request):

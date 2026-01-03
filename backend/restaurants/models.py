@@ -5,6 +5,7 @@ from django.utils.text import slugify
 User = get_user_model()
 
 class Restaurant(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_restaurants', limit_choices_to={'user_type__in': ['vendor', 'platform_admin']}, null=True, blank=True)
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField()
