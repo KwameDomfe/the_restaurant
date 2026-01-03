@@ -2,7 +2,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import { CartProvider, useCart } from './context/CartContext';
-import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import RestaurantDetailPage from './pages/RestaurantDetailPage.jsx';
 import MenuItemDetailPage from './pages/MenuItemDetailPage.jsx';
 import CartPage from './pages/CartPage.jsx';
@@ -73,7 +73,7 @@ export const AppProvider = ({ children }) => {
       console.error(message);
     }
     // Avoid blocking UX with alert; log to console
-    console.log(`[${type}] ${message}`);
+    // console.log(`[${type}] ${message}`);
   };
   const value = {
     restaurants,

@@ -19,7 +19,7 @@ const getHeaderTitle = (pathname) => {
 const MainHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const title = getHeaderTitle(location.pathname);
+  // const title = getHeaderTitle(location.pathname);
   const { user, setUser, showToast } = useApp();
   const [showProfileModal, setShowProfileModal] = useState(false);
 

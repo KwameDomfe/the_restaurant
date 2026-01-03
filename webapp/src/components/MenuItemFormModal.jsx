@@ -29,7 +29,7 @@ export default function MenuItemFormModal({ show, onHide, menuItem, restaurantId
     if (show && restaurantId) {
       fetchCategories();
     }
-  }, [show, restaurantId]);
+  }, [show, restaurantId, fetchCategories]);
 
   useEffect(() => {
     if (menuItem) {
