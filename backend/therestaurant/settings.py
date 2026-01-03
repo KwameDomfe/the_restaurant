@@ -113,8 +113,13 @@ else:
     DATABASES = {
         'default': dj_database_url.parse(
             config('DATABASE_URL'),
-            conn_max_age=600
+            conn_max_age=600,
+            conn_health_checks=True,
         )
+    }
+    # Disable replication slot management for managed databases
+    DATABASES['default']['OPTIONS'] = {
+        'options': '-c default_transaction_read_only=off -c statement_timeout=30000'
     }
 
 
