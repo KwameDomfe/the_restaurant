@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useApp } from '../App';
-import RestaurantCard from '../components/RestaurantCard';
-import RestaurantCardSkeleton from '../components/RestaurantCardSkeleton';
-import { Link } from 'react-router-dom';
+// import RestaurantCard from '../components/RestaurantCard';
+// import RestaurantCardSkeleton from '../components/RestaurantCardSkeleton';
 import SelectedRestaurants from '../components/homePage/SelectedRestaurants';
 import SelectedRestaurantsSkeleton from '../components/homePage/SelectedRestaurantsSkeleton';
 import Cuisines from '../components/homePage/Cuisines';

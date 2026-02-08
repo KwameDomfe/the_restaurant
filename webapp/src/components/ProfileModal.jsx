@@ -87,11 +87,11 @@ const ProfileModal = ({ show, onClose }) => {
         headers['Content-Type'] = 'application/json';
       }
 
-      const response = await axios.patch(
-        `${API_BASE_URL}/accounts/users/me/`,
-        requestData,
-        { headers }
-      );
+      // const response = await axios.patch(
+      //   `${API_BASE_URL}/accounts/users/me/`,
+      //   requestData,
+      //   { headers }
+      // );
       
       // Refetch user data to ensure we have the latest profile picture URL
       const freshUserData = await axios.get(

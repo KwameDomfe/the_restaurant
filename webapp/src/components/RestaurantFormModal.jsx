@@ -3,7 +3,7 @@ import { useApp } from '../App';
 import axios from 'axios';
 
 export default function RestaurantFormModal({ show, onHide, restaurant, onSuccess }) {
-  const { API_BASE_URL, user } = useApp();
+  const { API_BASE_URL } = useApp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');

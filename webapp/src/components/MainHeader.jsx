@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../App';
 import ProfileModal from './ProfileModal';
 
