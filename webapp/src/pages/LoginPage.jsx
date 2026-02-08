@@ -3,6 +3,13 @@ import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../App';
 
+const DEFAULT_USER_TYPES = [
+  { value: 'customer', label: 'Customer', description: 'Order food and enjoy meals' },
+  { value: 'vendor', label: 'Vendor', description: 'Manage restaurants and menus' },
+  { value: 'delivery', label: 'Delivery', description: 'Deliver orders and earn money' },
+  { value: 'staff', label: 'Staff', description: 'Work in restaurants' }
+];
+
 // Login page component
 const LoginPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,13 +23,7 @@ const LoginPage = () => {
     phoneNumber: '',
     userType: 'customer'
   });
-  const defaultUserTypes = [
-    { value: 'customer', label: 'Customer', description: 'Order food and enjoy meals' },
-    { value: 'vendor', label: 'Vendor', description: 'Manage restaurants and menus' },
-    { value: 'delivery', label: 'Delivery', description: 'Deliver orders and earn money' },
-    { value: 'staff', label: 'Staff', description: 'Work in restaurants' }
-  ];
-  const [userTypes, setUserTypes] = useState(defaultUserTypes);
+  const [userTypes, setUserTypes] = useState(DEFAULT_USER_TYPES);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
@@ -46,7 +47,7 @@ const LoginPage = () => {
       setUserTypes(response.data.user_types);
     } catch (error) {
       showToast('Failed to load user types', 'error');
-      setUserTypes(defaultUserTypes); // fallback
+      setUserTypes(DEFAULT_USER_TYPES); // fallback
     }
   }, [API_BASE_URL, showToast]);
 

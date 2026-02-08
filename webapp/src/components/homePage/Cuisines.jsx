@@ -7,7 +7,7 @@ const Cuisines = ({ popularCuisines = [] }) => {
       <p className="text-muted">Explore our most popular cuisines and find your next favorite meal.</p>
       <div className="row">
         {popularCuisines && popularCuisines.length > 0 ? (
-          popularCuisines.map((cuisine, idx) => (
+          popularCuisines.map((cuisine) => (
             <div className="col-md-4 col-lg-2 mb-3" key={cuisine.name}>
               <Link to={`/restaurants?cuisine=${encodeURIComponent(cuisine.name)}`} 
                 style={{ textDecoration: 'none', color: 'inherit' }}

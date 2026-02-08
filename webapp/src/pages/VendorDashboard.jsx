@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../App';
 import axios from 'axios';
 import RestaurantCard from '../components/RestaurantCard';
@@ -16,13 +16,7 @@ export default function VendorDashboard() {
     activeRestaurants: 0
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchMyRestaurants();
-    }
-  }, [user]);
-
-  const fetchMyRestaurants = async () => {
+  const fetchMyRestaurants = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('authToken');
@@ -50,7 +44,13 @@ export default function VendorDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE_URL]);
+
+  useEffect(() => {
+    if (user) {
+      fetchMyRestaurants();
+    }
+  }, [user, fetchMyRestaurants]);
 
   if (!user) {
     return (

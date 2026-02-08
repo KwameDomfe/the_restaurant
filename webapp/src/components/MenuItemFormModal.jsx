@@ -26,12 +26,6 @@ export default function MenuItemFormModal({ show, onHide, menuItem, restaurantId
   });
 
   useEffect(() => {
-    if (show && restaurantId) {
-      fetchCategories();
-    }
-  }, [show, restaurantId]);
-
-  useEffect(() => {
     if (menuItem) {
       setFormData({
         name: menuItem.name || '',

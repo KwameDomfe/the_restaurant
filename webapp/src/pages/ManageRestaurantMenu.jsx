@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '../App';
 import axios from 'axios';
@@ -13,11 +13,7 @@ export default function ManageRestaurantMenu() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    fetchRestaurantAndMenu();
-  }, [slug]);
-
-  const fetchRestaurantAndMenu = async () => {
+  const fetchRestaurantAndMenu = useCallback(async () => {
     setLoading(true);
     try {
       // Fetch restaurant details
@@ -40,7 +36,11 @@ export default function ManageRestaurantMenu() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE_URL, slug]);
+
+  useEffect(() => {
+    fetchRestaurantAndMenu();
+  }, [fetchRestaurantAndMenu]);
 
   if (loading) {
     return (

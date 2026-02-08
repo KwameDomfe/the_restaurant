@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useApp } from '../App';
@@ -16,21 +16,7 @@ const VerifyEmailPage = () => {
   const { API_BASE_URL, showToast, user } = useApp();
   const navigate = useNavigate();
   
-  // Auto-verify if code and email are in URL
-  useEffect(() => {
-    if (searchParams.get('code') && searchParams.get('email')) {
-      handleVerify();
-    }
-  }, []);
-  
-  // Use logged-in user's email if available
-  useEffect(() => {
-    if (user && !email) {
-      setEmail(user.email);
-    }
-  }, [user]);
-  
-  const handleVerify = async (e) => {
+  const handleVerify = useCallback(async (e) => {
     if (e) e.preventDefault();
     
     if (!verificationCode || !email) {
@@ -63,7 +49,21 @@ const VerifyEmailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE_URL, email, navigate, showToast, verificationCode]);
+  
+  // Auto-verify if code and email are in URL
+  useEffect(() => {
+    if (searchParams.get('code') && searchParams.get('email')) {
+      handleVerify();
+    }
+  }, [handleVerify, searchParams]);
+  
+  // Use logged-in user's email if available
+  useEffect(() => {
+    if (user && !email) {
+      setEmail(user.email);
+    }
+  }, [user, email]);
   
   const handleResendCode = async () => {
     if (!email) {

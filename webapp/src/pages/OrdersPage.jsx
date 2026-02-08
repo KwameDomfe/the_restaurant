@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useApp } from '../App';
 import { useNavigate } from 'react-router-dom';
@@ -9,15 +9,7 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    fetchOrders();
-  }, [user, navigate]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken');
       const response = await axios.get(`${API_BASE_URL}/orders/orders/`, {
@@ -31,7 +23,15 @@ const OrdersPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE_URL, showToast]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    fetchOrders();
+  }, [user, navigate, fetchOrders]);
 
   const getStatusBadgeClass = (status) => {
     const classes = {

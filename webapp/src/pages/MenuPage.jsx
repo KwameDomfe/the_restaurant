@@ -26,7 +26,7 @@ const MenuPage = () => {
       setRestaurantsLoading(false);
     }
   };
-  const { menuItems, loading, restaurants, setMenuItems, setLoading, setError, API_BASE_URL, error, setRestaurants } = useApp();
+  const { menuItems, restaurants, setMenuItems, setError, API_BASE_URL, error, setRestaurants } = useApp();
   const { slug } = useParams();
   const [filteredItems, setFilteredItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');

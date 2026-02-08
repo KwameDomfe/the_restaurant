@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useApp } from '../App';
@@ -15,11 +15,7 @@ const CategoryDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadCategoryAndItems();
-  }, [slug]);
-
-  const loadCategoryAndItems = async () => {
+  const loadCategoryAndItems = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -53,7 +49,11 @@ const CategoryDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE_URL, showToast, slug]);
+
+  useEffect(() => {
+    loadCategoryAndItems();
+  }, [loadCategoryAndItems]);
 
   if (loading) {
     return (
