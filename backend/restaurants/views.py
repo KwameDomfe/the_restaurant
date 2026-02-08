@@ -165,6 +165,7 @@ class RestaurantViewSet(viewsets.ModelViewSet):
             cuisine_type = cuisine_data['cuisine_type']
             popular_cuisines.append({
                 'name': cuisine_type,
+                
                 'emoji': cuisine_emojis.get(cuisine_type, '🍽️'),
                 'restaurant_count': cuisine_data['restaurant_count'],
                 'avg_rating': round(cuisine_data['avg_rating'] or 0, 1)
@@ -232,8 +233,7 @@ class MenuItemViewSet(viewsets.ModelViewSet):
     permission_classes = [IsRestaurantOwnerOrAdminOrReadOnly]
     lookup_field = 'slug'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = [
-        'restaurant', 'category', 'is_vegetarian', 
+    filterset_fields = ['restaurant', 'category', 'is_vegetarian', 
         'is_vegan', 'is_gluten_free', 'spice_level'
     ]
     search_fields = ['name', 'description', 'ingredients']
@@ -286,12 +286,35 @@ class MenuItemViewSet(viewsets.ModelViewSet):
         # Format response with display names and emojis
         response_data = []
         meal_period_info = {
-            'breakfast': {'name': 'Breakfast', 'emoji': '🌅', 'time': '7:00 AM - 11:00 AM'},
-            'brunch': {'name': 'Brunch', 'emoji': '🥞', 'time': '10:00 AM - 2:00 PM'},
-            'lunch': {'name': 'Lunch', 'emoji': '🌤️', 'time': '11:30 AM - 3:00 PM'},
-            'supper': {'name': 'Supper', 'emoji': '🌆', 'time': '5:00 PM - 7:00 PM'},
-            'dinner': {'name': 'Dinner', 'emoji': '🌙', 'time': '6:00 PM - 10:00 PM'},
-            'all_day': {'name': 'All Day', 'emoji': '⭐', 'time': 'Available All Day'}
+            'breakfast': {
+                'name': 'Breakfast', 
+                'emoji': '🌅',
+                'time': '7:00 AM - 11:00 AM'},
+            'brunch': {
+                'name': 'Brunch', 
+                'emoji': '🥞',
+                'time': '10:00 AM - 2:00 PM'
+            },
+            'lunch': {
+                'name': 'Lunch', 
+                'emoji': '🌤️',
+                'time': '11:30 AM - 3:00 PM'
+            },
+            'supper': {
+                'name': 'Supper', 
+                'emoji': '🌆',
+                'time': '5:00 PM - 7:00 PM'
+            },
+            'dinner': {
+                'name': 'Dinner', 
+                'emoji': '🌙',
+                'time': '6:00 PM - 10:00 PM'
+            },
+            'all_day': {
+                'name': 'All Day', 
+                'emoji': '⭐',
+                'time': 'Available All Day'
+            }
         }
         
         for period_key, items in meal_periods_data.items():

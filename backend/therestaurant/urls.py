@@ -1,19 +1,3 @@
-"""
-URL configuration for therestaurant project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
@@ -54,29 +38,37 @@ router.register(r'reviews', RestaurantReviewViewSet, basename='restaurantreview'
 
 
 urlpatterns = [
+
     path('', 
         api_root, 
         name='api-root'
     ),
+
     # Favicon to avoid 404 in browsers hitting backend root
     path('favicon.ico', 
         RedirectView.as_view(url='/static/favicon.ico', 
-                             permanent=True
-                            ),
+            permanent=True
+        ),
     ),
+
+    path('admin/', admin.site.urls),
+    
     path('api/', 
         include(router.urls)
     ),
+
     path('api/test/', 
         test_api, 
         name='api-test'
     ),
-    path('admin/', admin.site.urls),
+    
+    
     path('api/auth/', include('djoser.urls')),
     path('api/auth/', include('djoser.urls.jwt')),
     path('api/accounts/', include('accounts.urls')),
     path('api/orders/', include('orders.urls')),
     path('api/social/', include('social.urls')),
+
     # OpenAPI 3 documentation with Swagger UI
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
