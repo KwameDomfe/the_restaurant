@@ -160,11 +160,26 @@ DATABASES = {
     }
 }
 
-POSTGRES_DB = os.environ.get("POSTGRES_DB")
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
-POSTGRES_USER = os.environ.get("POSTGRES_USER")
-POSTGRES_HOST = os.environ.get("POSTGRES_HOST")
-POSTGRES_PORT = os.environ.get("POSTGRES_PORT")
+def _resolve_env_value(value: str | None) -> str | None:
+    if not value:
+        return None
+    value = value.strip()
+    if value.startswith('${') and value.endswith('}'):
+        key = value[2:-1].strip()
+        return os.environ.get(key)
+    return value
+
+
+POSTGRES_DB = _resolve_env_value(os.environ.get("POSTGRES_DB"))
+POSTGRES_PASSWORD = _resolve_env_value(os.environ.get("POSTGRES_PASSWORD"))
+POSTGRES_USER = _resolve_env_value(os.environ.get("POSTGRES_USER"))
+POSTGRES_HOST = _resolve_env_value(os.environ.get("POSTGRES_HOST"))
+POSTGRES_PORT_RAW = _resolve_env_value(os.environ.get("POSTGRES_PORT"))
+
+try:
+    POSTGRES_PORT = int(POSTGRES_PORT_RAW) if POSTGRES_PORT_RAW else None
+except ValueError:
+    POSTGRES_PORT = None
 
 POSTGRES_READY = (
     POSTGRES_DB is not None
