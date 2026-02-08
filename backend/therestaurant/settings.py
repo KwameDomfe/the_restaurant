@@ -27,11 +27,7 @@ AUTH_USER_MODEL = 'accounts.CustomUser'
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = (
-    os.environ.get('DJANGO_SECRET_KEY')
-    or os.environ.get('SECRET_KEY')
-    or '@1s6de1mlt#f(+41gum05#%@yzxxq$!xd8ghh_&-7*sz@qv1n#'
-)
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '@1s6de1mlt#f(+41gum05#%@yzxxq$!xd8ghh_&-7*sz@qv1n#')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Accept either DJANGO_DEBUG or DEBUG (from .env). Treat common truthy values as True.
@@ -42,7 +38,7 @@ DEBUG = str(os.environ.get('DJANGO_DEBUG', os.environ.get('DEBUG', 'False'))).lo
 
 # Fail loudly if SECRET_KEY is not set in production
 if not SECRET_KEY and not DEBUG:
-    raise ValueError("SECRET_KEY (or DJANGO_SECRET_KEY) environment variable must be set in production")
+    raise ValueError("DJANGO_SECRET_KEY environment variable must be set in production")
 
 # Always allow localhost for local development
 ALLOWED_HOSTS = ['localhost', '127.0.0.1','https://whale-app-ro8kj.ondigitalocean.app/']

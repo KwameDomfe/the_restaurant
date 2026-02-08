@@ -25,7 +25,6 @@ dj-database-url==3.0.1
 Django==5.2.7
 django-cors-headers==4.9.0
 django-debug-toolbar==6.1.0
-django-dotenv==1.4.2
 django-extensions==4.1
 django-filter==24.3
 django-json-widget==2.1.0
@@ -75,6 +74,7 @@ pytest==9.0.1
 pytest-django==4.11.1
 python-dateutil==2.9.0.post0
 python-decouple==3.8
+python-dotenv==1.0.1
 python3-openid==3.2.0
 pytokens==0.3.0
 pytz==2025.2
